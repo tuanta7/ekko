@@ -7,6 +7,7 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type Recorder struct {
@@ -17,45 +18,62 @@ func NewRecorder() *Recorder {
 	return &Recorder{}
 }
 
-func (r *Recorder) getMonitorSource() (string, error) {
-	listCmd := exec.Command("pactl", "list", "sinks")
-	grepCmd := exec.Command("grep", ".monitor")
+func (r *Recorder) Record(duration time.Duration, outputFile string) error {
+	monitorSource, err := r.getMonitorSource()
+	if err != nil {
+		return err
+	}
 
+	cmd := exec.Command("ffmpeg", "-f", "pulse",
+		"-i", monitorSource,
+		"-t", fmt.Sprintf("%0.2f", duration.Seconds()),
+		outputFile,
+	)
+	if err = cmd.Run(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Recorder) getMonitorSource() (string, error) {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
-	listCmd.Stdout = pw
-	grepCmd.Stdin = pr
+	listCmd := exec.Command("pactl", "list", "sinks")
+	listCmd.Stdout = pw // writes into the pipe’s write-end
 
-	var outBuf bytes.Buffer
-	grepCmd.Stdout = &outBuf
+	var buf bytes.Buffer
+	grepCmd := exec.Command("grep", ".monitor")
+	grepCmd.Stdin = pr // receives data from the pipe’s read-end
+	grepCmd.Stdout = &buf
 
 	if err := grepCmd.Start(); err != nil {
-		pw.Close()
+		_ = pw.Close()
 		return "", err
 	}
 
 	if err := listCmd.Run(); err != nil {
-		pw.Close()
-		grepCmd.Wait()
+		_ = pw.Close()
+		_ = grepCmd.Wait()
 		return "", err
 	}
 
 	// close writer to signal EOF to grep
-	pw.Close()
+	_ = pw.Close()
 
 	if err := grepCmd.Wait(); err != nil {
 		return "", err
 	}
 
-	output := strings.TrimSpace(outBuf.String())
+	output := strings.TrimSpace(buf.String())
 	if output == "" {
 		return "", errors.New("no monitor sink found")
 	}
 
-	// use the first matching line
 	line := output
 	if i := strings.IndexByte(output, '\n'); i >= 0 {
+		// use the first matching line
 		line = output[:i]
 	}
 
@@ -64,29 +82,9 @@ func (r *Recorder) getMonitorSource() (string, error) {
 		return "", fmt.Errorf("failed to parse pactl output: %q", line)
 	}
 
-	monitorSource := strings.TrimSpace(parts[1])
-	if monitorSource == "" {
-		return "", errors.New("no monitor sink found")
+	if src := strings.TrimSpace(parts[1]); src != "" {
+		return src, nil
 	}
 
-	return monitorSource, nil
-}
-
-func (r *Recorder) Record() error {
-	monitorSource, err := r.getMonitorSource()
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command("ffmpeg",
-		"-f", "pulse",
-		"-i", monitorSource,
-		"-t", "10",
-		"output.wav",
-	)
-	if err = cmd.Run(); err != nil {
-		return err
-	}
-
-	return nil
+	return "", errors.New("no monitor sink found")
 }
