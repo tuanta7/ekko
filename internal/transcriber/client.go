@@ -22,7 +22,7 @@ type Client interface {
 func NewClient(ctx context.Context, mode Mode, apiKey ...string) (Client, error) {
 	switch mode {
 	case WhisperMode:
-		return NewLocalClient(), nil
+		return NewLocalClient()
 	case GeminiMode:
 		if len(apiKey) != 1 {
 			return nil, errors.New("invalid credentials")

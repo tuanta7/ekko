@@ -59,9 +59,8 @@ func (a *Application) transcribe(stream chan string) error {
 		_ = reader.Close()
 		_ = os.Remove(msg.FileName)
 
-		a.transcriptions.Store(time.Now(), Transcription{
-			Timestamp: msg.Timestamp,
-			FileName:  msg.FileName,
+		a.transcription.Store(time.Now().Format(time.RFC822), TranscriptionChunk{
+			Timestamp: msg.Timestamp.Unix(),
 			Text:      fullText,
 			Error:     transcriptionErr,
 		})

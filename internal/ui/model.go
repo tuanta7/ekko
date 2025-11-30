@@ -23,6 +23,7 @@ type Model struct {
 	cursor        int
 	menuOptions   []string
 	chunkDuration time.Duration
+	errorMsg      string
 
 	spinner           spinner.Model
 	transcript        viewport.Model
@@ -60,6 +61,7 @@ func (m *Model) handleMenuSelection() (tea.Model, tea.Cmd) {
 		m.transcriptContent = ""
 		m.transcript.SetContent("")
 		m.transcript.YOffset = 0
+		m.errorMsg = ""
 
 		var err error
 		m.stream, err = m.app.Start(m.chunkDuration)
@@ -139,6 +141,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.waitForTranscript()
 	case sessionEndMsg:
 		m.screen = screenMenu
+		m.errorMsg = fmt.Sprintf("Error: %v", mt.Error)
 		return m, nil
 	default:
 		return m, nil
@@ -166,6 +169,12 @@ func (m *Model) View() string {
 				label = normalStyle.Render(label)
 			}
 			b.WriteString(fmt.Sprintf("%s %s\n", cursor, label))
+		}
+
+		if m.errorMsg != "" {
+			b.WriteString("\n")
+			b.WriteString(errorStyle.Render(m.errorMsg)) // Add error display
+			b.WriteString("\n")
 		}
 
 		b.WriteString(helpStyle.Render("up/down: navigate • left/right: adjust duration • enter: select • q: quit"))

@@ -47,7 +47,7 @@ func (c *GeminiClient) Transcribe(ctx context.Context, audioPath string) (io.Rea
 		return nil, fmt.Errorf("gemini client not initialized")
 	}
 
-	temperature := float32(0.1)
+	temperature := float32(0.5)
 	stream := c.client.Models.GenerateContentStream(ctx, c.model, contents, &genai.GenerateContentConfig{
 		Temperature: &temperature,
 	})

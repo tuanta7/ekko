@@ -4,10 +4,9 @@ Download whisper ggml models from [huggingface.co/ggerganov/whisper.cpp](https:/
 
 ## Building the Whisper Library
 
-The Go bindings depend on the compiled C/C++ library. A build script has already been provided in the Go bindings directory.
+Run the setup script to set environment variables.
 
 ```shell
-# Set up the environment
 source setup-whisper.sh 
 
 [INFO] Setting up environment...
@@ -17,7 +16,7 @@ C_INCLUDE_PATH: /home/tuanta/Projects/transcript/whisper/include:/home/tuanta/Pr
 LIBRARY_PATH: /home/tuanta/Projects/transcript/whisper/build_go/src:/home/tuanta/Projects/transcript/whisper/build_go/ggml/src
 ```
 
-Install make and cmake, then build the library.
+The Go bindings depend on the compiled C/C++ library. A build script has already been provided in the Go bindings directory.
 
 ```shell
 # Install dependencies

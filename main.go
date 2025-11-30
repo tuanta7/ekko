@@ -24,6 +24,23 @@ func main() {
 	}
 	defer gc.Close()
 
+	//err = gc.ResetContext(ctx)
+	//if err != nil {
+	//	fmt.Printf("Failed to transcribe: %v", err)
+	//}
+	//
+	//r, err := gc.Transcribe(ctx, "./jfk.wav")
+	//if err != nil {
+	//	fmt.Printf("Failed to transcribe: %v", err)
+	//}
+	//
+	//all, err := io.ReadAll(r)
+	//if err != nil {
+	//	return
+	//}
+	//
+	//fmt.Println(string(all))
+
 	recorder := audio.NewRecorder()
 	app := core.NewApplication(recorder, gc)
 

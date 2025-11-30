@@ -23,6 +23,7 @@ func (r *Recorder) Record(ctx context.Context, duration time.Duration, source, o
 	cmd := exec.CommandContext(ctx, "ffmpeg", "-f", "pulse",
 		"-i", source,
 		"-t", fmt.Sprintf("%0.2f", duration.Seconds()),
+		"-ar", "16000",
 		"-y", // overwrite output file
 		outputFile,
 	)

@@ -38,4 +38,8 @@ var (
 
 	transcriptTextStyle = lipgloss.NewStyle().
 				Foreground(textPrimary)
+
+	errorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("9")).
+			Bold(true)
 )
