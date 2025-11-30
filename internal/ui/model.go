@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -18,9 +19,10 @@ const (
 )
 
 type Model struct {
-	screen      screen
-	cursor      int
-	menuOptions []string
+	screen        screen
+	cursor        int
+	menuOptions   []string
+	chunkDuration time.Duration
 
 	spinner           spinner.Model
 	transcript        viewport.Model
@@ -38,11 +40,12 @@ func NewModel(app *core.Application) *Model {
 	vp.SetContent("")
 
 	return &Model{
-		screen:      screenMenu,
-		menuOptions: []string{"Start Session", "Exit"},
-		spinner:     sp,
-		transcript:  vp,
-		app:         app,
+		screen:        screenMenu,
+		menuOptions:   []string{"Start Session", "Chunk Duration", "Exit"},
+		spinner:       sp,
+		transcript:    vp,
+		app:           app,
+		chunkDuration: 10 * time.Second,
 	}
 }
 
@@ -59,12 +62,15 @@ func (m *Model) handleMenuSelection() (tea.Model, tea.Cmd) {
 		m.transcript.YOffset = 0
 
 		var err error
-		m.stream, err = m.app.StartSession()
+		m.stream, err = m.app.Start(m.chunkDuration)
 		if err != nil {
 			return m, tea.Quit
 		}
 
 		return m, tea.Batch(m.spinner.Tick, m.waitForTranscript())
+	case 1:
+		// chunk duration, no action on selection
+		return m, nil
 	case len(m.menuOptions) - 1:
 		return m, tea.Quit
 	default:
@@ -86,19 +92,28 @@ func (m *Model) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if m.cursor < len(m.menuOptions)-1 {
 				m.cursor++
 			}
+		case "left":
+			if m.cursor == 1 {
+				if m.chunkDuration > time.Second {
+					m.chunkDuration -= time.Second
+				}
+			}
+		case "right":
+			if m.cursor == 1 {
+				if m.chunkDuration < 60*time.Second {
+					m.chunkDuration += time.Second
+				}
+			}
 		case "enter":
 			return m.handleMenuSelection()
 		}
 	case screenRecording:
 		switch msg.String() {
 		case "ctrl+c", "q":
-			if m.app.IsRunning() {
-				_, _ = m.app.StopSession()
-			}
+			_, _ = m.app.Stop()
 			return m, tea.Quit
 		case "s", "S":
-			filename, err := m.app.StopSession()
-			return m, m.sessionEnd(filename, err)
+			return m, m.sessionEnd()
 		default:
 			var cmd tea.Cmd
 			m.transcript, cmd = m.transcript.Update(msg)
@@ -121,7 +136,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.transcriptContent += mt.Text + "\n"
 		m.transcript.SetContent(m.transcriptContent)
 		m.transcript.GotoBottom()
-
 		return m, m.waitForTranscript()
 	case sessionEndMsg:
 		m.screen = screenMenu
@@ -142,16 +156,19 @@ func (m *Model) View() string {
 		for i, choice := range m.menuOptions {
 			cursor := " "
 			label := choice
+			if choice == "Chunk Duration" {
+				label = fmt.Sprintf("Chunk Duration: %ds", int(m.chunkDuration.Seconds()))
+			}
 			if m.cursor == i {
 				cursor = ">"
-				label = selectedStyle.Render(choice)
+				label = selectedStyle.Render(label)
 			} else {
-				label = normalStyle.Render(choice)
+				label = normalStyle.Render(label)
 			}
 			b.WriteString(fmt.Sprintf("%s %s\n", cursor, label))
 		}
 
-		b.WriteString(helpStyle.Render("up/down: navigate • enter: select • q: quit"))
+		b.WriteString(helpStyle.Render("up/down: navigate • left/right: adjust duration • enter: select • q: quit"))
 	case screenRecording:
 		b.WriteString(titleStyle.Render("Recording Session"))
 		b.WriteString("\n")

@@ -26,10 +26,10 @@ This will install:
 
 Environment variables
 
-| Variable          | Description           | Values              |
-|-------------------|-----------------------|---------------------|
-| TRANSCRIPTOR_MODE | Transcription backend | `gemini`, `whisper` |
-| GEMINI_API_KEY    | Google Gemini API key | Your API key        |
+| Variable         | Description           | Values              |
+|------------------|-----------------------|---------------------|
+| TRANSCRIBER_MODE | Transcription backend | `gemini`, `whisper` |
+| GEMINI_API_KEY   | Google Gemini API key | Your API key        |
 
 ### Get a Gemini API Key
 
@@ -43,4 +43,4 @@ Environment variables
 - [ ] Support for multiple audio sources (microphones, system)
 - [ ] Export to text/Markdown format
 - [ ] Real-time word highlighting
-- [ ] Custom recording duration settings
+- [x] Custom recording chunk duration settings

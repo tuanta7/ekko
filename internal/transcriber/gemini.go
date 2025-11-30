@@ -1,7 +1,8 @@
-package transcriptor
+package transcriber
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 
@@ -28,10 +29,22 @@ func NewGeminiClient(ctx context.Context, apiKey string) (*GeminiClient, error) 
 	}, nil
 }
 
+func (c *GeminiClient) ResetContext(_ context.Context) error {
+	return nil
+}
+
+func (c *GeminiClient) Close() error {
+	return nil
+}
+
 func (c *GeminiClient) Transcribe(ctx context.Context, audioPath string) (io.ReadCloser, error) {
 	contents, err := c.newContentsFromAudio(audioPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if c == nil || c.client == nil {
+		return nil, fmt.Errorf("gemini client not initialized")
 	}
 
 	temperature := float32(0.1)
@@ -39,15 +52,37 @@ func (c *GeminiClient) Transcribe(ctx context.Context, audioPath string) (io.Rea
 		Temperature: &temperature,
 	})
 
+	if stream == nil {
+		return nil, fmt.Errorf("generate content stream returned nil")
+	}
+
 	r, w := io.Pipe()
 	go func() {
 		defer w.Close()
-		for chunk := range stream {
+		for chunk, chunkErr := range stream {
+			if chunkErr != nil {
+				c.writeToStream(ctx, w, normalizeError(chunkErr))
+				continue
+			}
 			c.writeToStream(ctx, w, chunk)
 		}
 	}()
 
 	return r, nil
+}
+
+func normalizeError(chunkErr error) *genai.GenerateContentResponse {
+	return &genai.GenerateContentResponse{
+		Candidates: []*genai.Candidate{
+			{
+				Content: &genai.Content{
+					Parts: []*genai.Part{
+						genai.NewPartFromText(fmt.Sprintf("Error during transcription: %v", chunkErr)),
+					},
+				},
+			},
+		},
+	}
 }
 
 func (c *GeminiClient) newContentsFromAudio(audioPath string) ([]*genai.Content, error) {

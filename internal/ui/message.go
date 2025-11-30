@@ -13,7 +13,8 @@ type sessionEndMsg struct {
 	Error     error
 }
 
-func (*Model) sessionEnd(filename string, err error) tea.Cmd {
+func (m *Model) sessionEnd() tea.Cmd {
+	filename, err := m.app.Stop()
 	return func() tea.Msg {
 		return sessionEndMsg{
 			Timestamp: time.Now(),
@@ -31,6 +32,7 @@ func (m *Model) waitForTranscript() tea.Cmd {
 	return func() tea.Msg {
 		text, ok := <-m.stream
 		if !ok {
+			_, _ = m.app.Stop()
 			return sessionEndMsg{
 				Timestamp: time.Now(),
 				Error:     fmt.Errorf("stream closed"),

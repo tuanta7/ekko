@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/tuanta7/transcript/pkg/queue"
 )
@@ -20,7 +21,7 @@ func (a *Application) transcribe(stream chan string) error {
 			return err
 		}
 
-		reader, err := a.gemini.Transcribe(a.ctx, msg.FileName)
+		reader, err := a.trClient.Transcribe(a.ctx, msg.FileName)
 		if err != nil {
 			if a.ctx.Err() != nil {
 				return a.ctx.Err()
@@ -45,10 +46,10 @@ func (a *Application) transcribe(stream chan string) error {
 
 		transcriptionErr := scanner.Err()
 		if transcriptionErr != nil {
-			errMsg := fmt.Sprintf("Failed to read transcript: %s\n", transcriptionErr.Error())
+			errMsg := fmt.Sprintf("[Error] Failed to read transcript: %s\n", transcriptionErr.Error())
 
 			select {
-			case stream <- ErrorMessage(errMsg):
+			case stream <- errMsg:
 			case <-a.ctx.Done():
 				_ = reader.Close()
 				return a.ctx.Err()
@@ -58,13 +59,11 @@ func (a *Application) transcribe(stream chan string) error {
 		_ = reader.Close()
 		_ = os.Remove(msg.FileName)
 
-		a.session.mu.Lock()
-		a.session.Transcriptions = append(a.session.Transcriptions, Transcription{
+		a.transcriptions.Store(time.Now(), Transcription{
 			Timestamp: msg.Timestamp,
 			FileName:  msg.FileName,
 			Text:      fullText,
 			Error:     transcriptionErr,
 		})
-		a.session.mu.Unlock()
 	}
 }

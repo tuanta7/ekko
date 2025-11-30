@@ -1,4 +1,4 @@
-package transcriptor
+package transcriber
 
 import (
 	"context"
@@ -15,6 +15,8 @@ const (
 
 type Client interface {
 	Transcribe(ctx context.Context, audioPath string) (io.ReadCloser, error)
+	ResetContext(ctx context.Context) error
+	Close() error
 }
 
 func NewClient(ctx context.Context, mode Mode, apiKey ...string) (Client, error) {

@@ -8,16 +8,16 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Set up paths relative to project root
+WHISPER_CPP_DIR="$SCRIPT_DIR/whisper"
+WHISPER_BUILD_DIR="$SCRIPT_DIR/whisper/build_go"
+MODELS_DIR="$SCRIPT_DIR/models"
+
 echo -e "${GREEN}[INFO]${NC} Setting up environment..."
 echo "Project root: $SCRIPT_DIR"
 
 # Model paths
 export WHISPER_MODEL_PATH="$MODELS_DIR/ggml-small.bin"
-
-# Set up paths relative to project root
-WHISPER_CPP_DIR="$SCRIPT_DIR/whisper.cpp"
-WHISPER_BUILD_DIR="$SCRIPT_DIR/whisper.cpp/build_go"
-MODELS_DIR="$SCRIPT_DIR/models"
 
 # Export environment variables
 export C_INCLUDE_PATH="$WHISPER_CPP_DIR/include:$WHISPER_CPP_DIR/ggml/include"

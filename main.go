@@ -7,21 +7,22 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/tuanta7/transcript/internal/audio"
 	"github.com/tuanta7/transcript/internal/core"
+	"github.com/tuanta7/transcript/internal/transcriber"
 	"github.com/tuanta7/transcript/internal/ui"
-	"github.com/tuanta7/transcript/pkg/audio"
-	"github.com/tuanta7/transcript/pkg/transcriptor"
 )
 
 func main() {
 	ctx := context.Background()
 
-	mode := transcriptor.Mode(os.Getenv("TRANSCRIPTOR_MODE"))
-	gc, err := transcriptor.NewClient(ctx, mode, os.Getenv("GEMINI_API_KEY"))
+	mode := transcriber.Mode(os.Getenv("TRANSCRIBER_MODE"))
+	gc, err := transcriber.NewClient(ctx, mode, os.Getenv("GEMINI_API_KEY"))
 	if err != nil {
-		fmt.Printf("Failed to create Gemini client: %v", err)
+		fmt.Printf("Failed to create transcriber client: %v", err)
 		os.Exit(1)
 	}
+	defer gc.Close()
 
 	recorder := audio.NewRecorder()
 	app := core.NewApplication(recorder, gc)
