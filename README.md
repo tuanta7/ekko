@@ -39,7 +39,7 @@ Environment variables
 
 ## Todo List
 
-- [ ] Add support for local models (whisper, gemma3n + ollama, etc.)
+- [x] Add support for local models (whisper, gemma3n + ollama, etc.)
 - [ ] Support for multiple audio sources (microphones, system)
 - [ ] Export to text/Markdown format
 - [ ] Real-time word highlighting

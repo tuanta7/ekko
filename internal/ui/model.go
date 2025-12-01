@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/muesli/reflow/wordwrap"
 	"github.com/tuanta7/transcript/internal/core"
 )
 
@@ -136,12 +137,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	case transcriptChunkMsg:
 		m.transcriptContent += mt.Text + "\n"
-		m.transcript.SetContent(m.transcriptContent)
+		wrapped := wordwrap.String(m.transcriptContent, m.transcript.Width-3)
+		m.transcript.SetContent(wrapped)
 		m.transcript.GotoBottom()
 		return m, m.waitForTranscript()
 	case sessionEndMsg:
 		m.screen = screenMenu
-		m.errorMsg = fmt.Sprintf("Error: %v", mt.Error)
+		if mt.Error != nil {
+			m.errorMsg = fmt.Sprintf("Error: %v", mt.Error)
+		}
 		return m, nil
 	default:
 		return m, nil
@@ -173,7 +177,7 @@ func (m *Model) View() string {
 
 		if m.errorMsg != "" {
 			b.WriteString("\n")
-			b.WriteString(errorStyle.Render(m.errorMsg)) // Add error display
+			b.WriteString(errorStyle.Render(m.errorMsg))
 			b.WriteString("\n")
 		}
 

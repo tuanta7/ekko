@@ -67,6 +67,7 @@ func (a *Application) Start(chunkDuration time.Duration) (<-chan string, error) 
 	go func() {
 		defer func() {
 			a.wg.Done()
+			// time.Sleep(100 * time.Second) // for debugging
 			close(stream) // Signal consumers when done
 			if r := recover(); r != nil {
 				_, _ = fmt.Fprintf(os.Stderr, "transcribe panic recovered: %v\n", r)
