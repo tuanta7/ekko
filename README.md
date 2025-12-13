@@ -1,6 +1,18 @@
 # Ekko
 
-A real-time desktop audio transcription application with a clean TUI interface. Transcribe your system audio on the fly using Google's Gemini API.
+<img align="right" src="./logo.png" alt="Ekko Mascot" width="150"/>
+
+![Status](https://img.shields.io/badge/status-development-orange)
+![Language](https://img.shields.io/badge/lang-Go-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+A near real-time desktop audio transcription tool with a clean terminal UI. Capture system audio, transcribe on the fly using local Whisper models or Google Gemini API
+
+## Key features
+
+- Local and cloud transcription backends: whisper (local) and gemini (Google API).
+- Privacy-first local mode when using Whisper models; no network round trips.
+- Clean TUI for live transcription and simple controls.
 
 ![Demo](demo.gif)
 
@@ -9,9 +21,12 @@ A real-time desktop audio transcription application with a clean TUI interface. 
 ## Quick Start
 
 ```sh
+# Build the go binding library
+make build
+
+# Run the app
 make dev
 ```
-
 ### Prerequisites
 
 Run the script below to install required dependencies
