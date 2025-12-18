@@ -20,7 +20,13 @@ A near real-time desktop audio transcription tool with a clean terminal UI. Capt
 
 ## Quick Start
 
+![OS](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=Ubuntu&logoColor=white)
+
 ```sh
+# Install make
+sudo apt update
+sudo apt install build-essential
+
 # Build the go binding library
 make build
 
