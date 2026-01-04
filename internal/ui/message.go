@@ -2,42 +2,41 @@ package ui
 
 import (
 	"fmt"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type sessionEndMsg struct {
-	Timestamp time.Time
-	Filename  string
-	Error     error
+	Error error
 }
 
-func (m *Model) sessionEnd() tea.Cmd {
-	filename, err := m.app.Stop()
+func (m *Model) sessionEnd(err error) tea.Cmd {
 	return func() tea.Msg {
 		return sessionEndMsg{
-			Timestamp: time.Now(),
-			Filename:  filename,
-			Error:     err,
+			Error: err,
 		}
 	}
 }
 
-type transcriptChunkMsg struct {
-	Text string
+type transcriptMsg struct {
+	chunk string
 }
 
 func (m *Model) waitForTranscript() tea.Cmd {
 	return func() tea.Msg {
-		text, ok := <-m.stream
-		if !ok {
-			_, _ = m.app.Stop()
-			return sessionEndMsg{
-				Timestamp: time.Now(),
-				Error:     fmt.Errorf("stream closed"),
+		select {
+		case <-m.ctx.Done():
+			return sessionEndMsg{Error: nil}
+		case chunk, ok := <-m.stream:
+			if !ok {
+				err := m.handler.Stop()
+				if err == nil {
+					err = fmt.Errorf("stream closed")
+				}
+
+				return m.sessionEnd(err)
 			}
+			return transcriptMsg{chunk: chunk}
 		}
-		return transcriptChunkMsg{Text: text}
 	}
 }

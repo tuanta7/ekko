@@ -14,7 +14,7 @@ var (
 
 type Message struct {
 	Timestamp time.Time
-	FileName  string
+	Data      map[string]string
 }
 
 type RecordQueue struct {

@@ -1,8 +1,6 @@
 package logger
 
 import (
-	"os"
-
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -10,9 +8,9 @@ type FileLogger struct {
 	filePath string
 }
 
-func NewLogger(fileName string) *FileLogger {
+func NewLogger(filePath string) *FileLogger {
 	return &FileLogger{
-		filePath: fileName,
+		filePath: filePath,
 	}
 }
 
@@ -37,11 +35,7 @@ func (l *FileLogger) logToFile(msg string, prefix string) error {
 	if err != nil {
 		return err
 	}
-	defer func(file *os.File) {
-		if err := file.Close(); err != nil {
-			panic(err)
-		}
-	}(file)
+	defer file.Close()
 
 	_, err = file.Write([]byte(msg))
 	return err

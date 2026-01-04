@@ -1,9 +1,8 @@
-package transcriber
+package scribe
 
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 
 	"google.golang.org/genai"
@@ -25,11 +24,11 @@ func NewGeminiClient(ctx context.Context, apiKey string) (*GeminiClient, error) 
 
 	return &GeminiClient{
 		client: client,
-		model:  "gemini-2.0-flash",
+		model:  "gemini-2.0-flash-lite",
 	}, nil
 }
 
-func (c *GeminiClient) ResetContext(_ context.Context) error {
+func (c *GeminiClient) ResetContext() error {
 	return nil
 }
 
@@ -37,14 +36,14 @@ func (c *GeminiClient) Close() error {
 	return nil
 }
 
-func (c *GeminiClient) Transcribe(ctx context.Context, audioPath string) (io.ReadCloser, error) {
+func (c *GeminiClient) Transcribe(ctx context.Context, audioPath string, out chan string) error {
 	contents, err := c.newContentsFromAudio(audioPath)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if c == nil || c.client == nil {
-		return nil, fmt.Errorf("gemini client not initialized")
+		return fmt.Errorf("gemini client not initialized")
 	}
 
 	temperature := float32(0.5)
@@ -53,36 +52,18 @@ func (c *GeminiClient) Transcribe(ctx context.Context, audioPath string) (io.Rea
 	})
 
 	if stream == nil {
-		return nil, fmt.Errorf("generate content stream returned nil")
+		return fmt.Errorf("generate content stream returned nil")
 	}
 
-	r, w := io.Pipe()
-	go func() {
-		defer w.Close()
-		for chunk, chunkErr := range stream {
-			if chunkErr != nil {
-				c.writeToStream(ctx, w, normalizeError(chunkErr))
-				continue
-			}
-			c.writeToStream(ctx, w, chunk)
+	for chunk, chunkErr := range stream {
+		if chunkErr != nil {
+			c.writeToStream(ctx, out, normalizeError(chunkErr))
+			continue
 		}
-	}()
-
-	return r, nil
-}
-
-func normalizeError(chunkErr error) *genai.GenerateContentResponse {
-	return &genai.GenerateContentResponse{
-		Candidates: []*genai.Candidate{
-			{
-				Content: &genai.Content{
-					Parts: []*genai.Part{
-						genai.NewPartFromText(fmt.Sprintf("Error during transcription: %v", chunkErr)),
-					},
-				},
-			},
-		},
+		c.writeToStream(ctx, out, chunk)
 	}
+
+	return nil
 }
 
 func (c *GeminiClient) newContentsFromAudio(audioPath string) ([]*genai.Content, error) {
@@ -106,7 +87,7 @@ func (c *GeminiClient) newContentsFromAudio(audioPath string) ([]*genai.Content,
 	return []*genai.Content{genai.NewContentFromParts(parts, genai.RoleUser)}, nil
 }
 
-func (c *GeminiClient) writeToStream(ctx context.Context, w *io.PipeWriter, chunk *genai.GenerateContentResponse) {
+func (c *GeminiClient) writeToStream(ctx context.Context, out chan string, chunk *genai.GenerateContentResponse) {
 	select {
 	case <-ctx.Done():
 		return
@@ -125,11 +106,22 @@ func (c *GeminiClient) writeToStream(ctx context.Context, w *io.PipeWriter, chun
 					continue
 				}
 
-				if _, err := w.Write([]byte(part.Text)); err != nil {
-					_ = w.CloseWithError(err)
-					return
-				}
+				out <- part.Text
 			}
 		}
+	}
+}
+
+func normalizeError(chunkErr error) *genai.GenerateContentResponse {
+	return &genai.GenerateContentResponse{
+		Candidates: []*genai.Candidate{
+			{
+				Content: &genai.Content{
+					Parts: []*genai.Part{
+						genai.NewPartFromText(fmt.Sprintf("Error while process audio: %v", chunkErr)),
+					},
+				},
+			},
+		},
 	}
 }

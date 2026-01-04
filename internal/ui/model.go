@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -9,7 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/muesli/reflow/wordwrap"
-	"github.com/tuanta7/ekko/internal/core"
+	"github.com/tuanta7/ekko/internal/handler"
 	"github.com/tuanta7/ekko/pkg/logger"
 )
 
@@ -21,29 +22,32 @@ const (
 )
 
 type Model struct {
-	screen          screen
-	cursor          int
-	menuOptions     []string
-	chunkDuration   time.Duration
-	errorMsg        string
-	sessionStopping bool
+	screen        screen
+	cursor        int
+	spinner       spinner.Model
+	transcript    viewport.Model
+	menuOptions   []string
+	chunkDuration time.Duration
 
-	spinner           spinner.Model
-	transcript        viewport.Model
-	transcriptContent string
-	chunkCount        int
 	sessionStart      time.Time
+	transcriptContent string
+	isStopping        bool
+	errorMsg          string
 
-	app    *core.Application
-	stream <-chan string
-	logger *logger.FileLogger
+	handler *handler.Handler
+	stream  <-chan string
+	ctx     context.Context
+	cancel  context.CancelFunc
+	logger  *logger.FileLogger
 }
 
-func NewModel(app *core.Application) *Model {
+func NewModel(app *handler.Handler, logger *logger.FileLogger) *Model {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 
-	vp := viewport.New(100, 10)
+	vp := viewport.New(80, 5)
 	vp.SetContent("")
 
 	return &Model{
@@ -51,8 +55,11 @@ func NewModel(app *core.Application) *Model {
 		menuOptions:   []string{"Start Session", "Chunk Duration", "Exit"},
 		spinner:       sp,
 		transcript:    vp,
-		app:           app,
+		handler:       app,
 		chunkDuration: 10 * time.Second,
+		ctx:           ctx,
+		cancel:        cancel,
+		logger:        logger,
 	}
 }
 
@@ -68,23 +75,19 @@ func (m *Model) handleMenuSelection() (tea.Model, tea.Cmd) {
 		m.transcript.SetContent("")
 		m.transcript.YOffset = 0
 		m.errorMsg = ""
-		m.chunkCount = 0
 		m.sessionStart = time.Now()
 
 		var err error
-		m.stream, err = m.app.Start(m.chunkDuration)
+		m.stream, err = m.handler.Start(m.ctx, m.chunkDuration)
 		if err != nil {
-			return m, tea.Quit
+			return m, m.sessionEnd(err)
 		}
 
 		return m, tea.Batch(m.spinner.Tick, m.waitForTranscript())
 	case 1:
-		// chunk duration, no action on selection
 		return m, nil
-	case len(m.menuOptions) - 1:
-		return m, tea.Quit
 	default:
-		return m, nil
+		return m, tea.Quit
 	}
 }
 
@@ -120,14 +123,17 @@ func (m *Model) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case screenRecording:
 		switch msg.String() {
 		case "ctrl+c", "q":
-			_, _ = m.app.Stop()
+			m.cancel()
+			if err := m.handler.Stop(); err != nil {
+				_ = m.logger.Error(fmt.Sprintf("Failed to stop session: %v", err))
+			}
 			return m, tea.Quit
 		case "s", "S":
-			if m.sessionStopping {
-				return m, nil // ignore spam
-			}
-			m.sessionStopping = true
-			return m, m.sessionEnd()
+			m.cancel()
+			m.isStopping = true
+			err := m.handler.Stop()
+			m.isStopping = false
+			return m, m.sessionEnd(err)
 		default:
 			var cmd tea.Cmd
 			m.transcript, cmd = m.transcript.Update(msg)
@@ -146,16 +152,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(mt)
 		return m, cmd
-	case transcriptChunkMsg:
-		m.chunkCount++
-		m.transcriptContent += mt.Text + "\n"
+	case transcriptMsg:
+		_ = m.handler.SaveChunk(mt.chunk)
+
+		m.transcriptContent += mt.chunk
 		wrapped := wordwrap.String(m.transcriptContent, m.transcript.Width-3)
 		m.transcript.SetContent(wrapped)
 		m.transcript.GotoBottom()
 		return m, m.waitForTranscript()
 	case sessionEndMsg:
 		m.screen = screenMenu
-		m.sessionStopping = false // reset guard
 		if mt.Error != nil {
 			m.errorMsg = fmt.Sprintf("Error: %v", mt.Error)
 		}
@@ -170,68 +176,42 @@ func (m *Model) View() string {
 
 	switch m.screen {
 	case screenMenu:
-		b.WriteString(subtitleStyle.Render(" Real-time Audio Transcription"))
+		b.WriteString(logoStyle.Render(logo))
 		b.WriteString("\n")
 
-		// Menu items
-		var menuItems strings.Builder
 		for i, choice := range m.menuOptions {
-			icon := " "
 			label := choice
-
-			switch choice {
-			case "Start Session":
-				icon = "▶"
-			case "Chunk Duration":
-				icon = "⏱"
-				durVal := durationValueStyle.Render(fmt.Sprintf("%ds", int(m.chunkDuration.Seconds())))
-				label = fmt.Sprintf("Chunk Duration: %s  ◀ ▶", durVal)
-			case "Exit":
-				icon = "✕"
+			if choice == "Chunk Duration" {
+				label = fmt.Sprintf("Chunk Duration: %s", valueStyle.Render(fmt.Sprintf("%ds", int(m.chunkDuration.Seconds()))))
 			}
 
 			if m.cursor == i {
-				cursor := cursorStyle.Render("●")
-				menuItems.WriteString(fmt.Sprintf(" %s %s %s\n", cursor, icon, selectedStyle.Render(label)))
+				b.WriteString(selectedStyle.Render(fmt.Sprintf("> %s", label)) + "\n")
 			} else {
-				menuItems.WriteString(fmt.Sprintf("   %s %s\n", icon, normalStyle.Render(label)))
+				b.WriteString(normalStyle.Render(fmt.Sprintf("  %s", label)) + "\n")
 			}
 		}
-		b.WriteString(menuBoxStyle.Render(menuItems.String()))
 
 		if m.errorMsg != "" {
-			b.WriteString("\n")
-			b.WriteString(errorStyle.Render(" ⚠ " + m.errorMsg + " "))
-			b.WriteString("\n")
+			b.WriteString("\n" + errorStyle.Render(m.errorMsg) + "\n")
 		}
 
-		b.WriteString("\n")
-		help := fmt.Sprintf("%s navigate  %s adjust  %s select  %s quit",
-			helpKeyStyle.Render("↑↓"),
-			helpKeyStyle.Render("←→"),
-			helpKeyStyle.Render("enter"),
-			helpKeyStyle.Render("q"))
-		b.WriteString(helpStyle.Render(help))
+		b.WriteString("\n" + helpStyle.Render("↑/↓ navigate  ←/→ adjust  enter select  q quit"))
 
 	case screenRecording:
 		elapsed := time.Since(m.sessionStart).Round(time.Second)
-		recDot := recordingDotStyle.Render("●")
-		status := fmt.Sprintf("%s %s  Recording  •  %s elapsed  •  %d chunks",
+		status := fmt.Sprintf("%s %s  %s",
 			m.spinner.View(),
-			recDot,
-			elapsed.String(),
-			m.chunkCount)
-		b.WriteString(statusStyle.Render(status))
-		b.WriteString("\n")
-		b.WriteString(transcriptBoxStyle.Render(transcriptTextStyle.Render(m.transcript.View())))
-		b.WriteString("\n\n")
+			statusStyle.Render("Recording"),
+			valueStyle.Render(elapsed.String()))
+		b.WriteString(status + "\n\n")
 
-		// Help
-		help := fmt.Sprintf("%s scroll  %s stop & save  %s quit",
-			helpKeyStyle.Render("↑↓"),
-			helpKeyStyle.Render("s"),
-			helpKeyStyle.Render("q"))
-		b.WriteString(helpStyle.Render(help))
+		if m.isStopping {
+			b.WriteString(statusStyle.Render("Saving transcript...") + "\n\n")
+		}
+
+		b.WriteString(transcriptStyle.Render(m.transcript.View()))
+		b.WriteString("\n\n" + helpStyle.Render("↑/↓ scroll  s stop  q quit"))
 	}
 
 	return b.String()
