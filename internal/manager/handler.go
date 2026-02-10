@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/tuanta7/ekko/internal/audio"
+	"github.com/tuanta7/ekko/internal/queue"
 	"github.com/tuanta7/ekko/internal/scribe"
 	"github.com/tuanta7/ekko/pkg/logger"
-	"github.com/tuanta7/ekko/pkg/queue"
 )
 
 const (
@@ -30,14 +30,14 @@ type Handler struct {
 	mu          sync.Mutex
 	isRunning   bool
 	sessionFile *os.File
-	logger      *logger.FileLogger
+	logger      *logger.Logger
 	queue       *queue.RecordQueue
 	counter     atomic.Uint32
 	recorder    audio.Recorder
 	scribe      scribe.Scriber
 }
 
-func NewHandler(recorder audio.Recorder, scribe scribe.Scriber, logger *logger.FileLogger) *Handler {
+func NewHandler(recorder audio.Recorder, scribe scribe.Scriber, logger *logger.Logger) *Handler {
 	return &Handler{
 		recorder: recorder,
 		scribe:   scribe,

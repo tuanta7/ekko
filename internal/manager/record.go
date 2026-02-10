@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tuanta7/ekko/pkg/queue"
+	"github.com/tuanta7/ekko/internal/queue"
 )
 
 // record continuously records audio and enqueues for transcription

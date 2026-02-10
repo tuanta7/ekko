@@ -38,10 +38,10 @@ type Model struct {
 	stream  <-chan string
 	ctx     context.Context
 	cancel  context.CancelFunc
-	logger  *logger.FileLogger
+	logger  *logger.Logger
 }
 
-func NewModel(app *handler.Handler, logger *logger.FileLogger) *Model {
+func NewModel(app *handler.Handler, logger *logger.Logger) *Model {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	sp := spinner.New()

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tuanta7/ekko/pkg/queue"
+	"github.com/tuanta7/ekko/internal/queue"
 )
 
 func (h *Handler) transcribe(ctx context.Context, stream chan string) error {
