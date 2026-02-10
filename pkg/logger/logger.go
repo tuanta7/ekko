@@ -1,42 +1,29 @@
 package logger
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-type FileLogger struct {
-	filePath string
+type Logger struct {
+	*zap.Logger
 }
 
-func NewLogger(filePath string) *FileLogger {
-	return &FileLogger{
-		filePath: filePath,
-	}
-}
+func New(level zapcore.Level) (*Logger, error) {
+	cfg := zap.NewProductionConfig()
+	cfg.Encoding = "json"
+	cfg.Level = zap.NewAtomicLevelAt(level)
+	cfg.OutputPaths = []string{"stdout"}
 
-func (l *FileLogger) Debug(msg string) error {
-	return l.logToFile(msg, "debug")
-}
-
-func (l *FileLogger) Info(msg string) error {
-	return l.logToFile(msg, "info")
-}
-
-func (l *FileLogger) Warn(msg string) error {
-	return l.logToFile(msg, "warn")
-}
-
-func (l *FileLogger) Error(msg string) error {
-	return l.logToFile(msg, "error")
-}
-
-func (l *FileLogger) logToFile(msg string, prefix string) error {
-	file, err := tea.LogToFile(l.filePath, prefix)
+	zl, err := cfg.Build(
+		zap.AddCaller(),
+		zap.AddCallerSkip(1),
+	)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer file.Close()
 
-	_, err = file.Write([]byte(msg))
-	return err
+	return &Logger{
+		Logger: zl,
+	}, nil
 }

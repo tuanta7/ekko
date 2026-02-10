@@ -1,4 +1,4 @@
-package worker
+package queue
 
 type Pool struct {
 	workers chan struct{}

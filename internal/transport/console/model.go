@@ -1,4 +1,4 @@
-package ui
+package console
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/muesli/reflow/wordwrap"
-	"github.com/tuanta7/ekko/internal/handler"
+	"github.com/tuanta7/ekko/internal/manager"
 	"github.com/tuanta7/ekko/pkg/logger"
 )
 
@@ -34,14 +34,14 @@ type Model struct {
 	isStopping        bool
 	errorMsg          string
 
-	handler *handler.Handler
+	handler *manager.Handler
 	stream  <-chan string
 	ctx     context.Context
 	cancel  context.CancelFunc
 	logger  *logger.Logger
 }
 
-func NewModel(app *handler.Handler, logger *logger.Logger) *Model {
+func NewModel(app *manager.Handler, logger *logger.Logger) *Model {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	sp := spinner.New()
@@ -125,7 +125,7 @@ func (m *Model) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			m.cancel()
 			if err := m.handler.Stop(); err != nil {
-				_ = m.logger.Error(fmt.Sprintf("Failed to stop session: %v", err))
+				m.logger.Error(fmt.Sprintf("Failed to stop session: %v", err))
 			}
 			return m, tea.Quit
 		case "s", "S":

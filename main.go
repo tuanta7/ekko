@@ -6,15 +6,13 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/tuanta7/ekko/internal/audio"
-	"github.com/tuanta7/ekko/internal/handler"
+	"github.com/tuanta7/ekko/internal/manager"
 	"github.com/tuanta7/ekko/internal/scribe"
-	"github.com/tuanta7/ekko/internal/ui"
-	"github.com/tuanta7/ekko/pkg/logger"
+	"github.com/tuanta7/ekko/internal/transport/console"
 )
 
 func main() {
@@ -32,10 +30,10 @@ func main() {
 		}
 	}(s)
 
-	recorder, err := audio.NewFFmpegRecorder(ctx)
-	fl := logger.NewLogger(fmt.Sprintf("./logs/%s.log", time.Now().Format("2006-01-02_15-04-05")))
-	app := handler.NewHandler(recorder, s, fl)
-	_, err = tea.NewProgram(ui.NewModel(app, fl)).Run()
+	recorder := audio.NewFFmpegRecorder()
+
+	app := manager.NewHandler(recorder, s, fl)
+	_, err = tea.NewProgram(console.NewModel(app, fl)).Run()
 	if err != nil {
 		log.Fatalf("Alas, there's been an error: %v", err)
 	}
