@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/muesli/reflow/wordwrap"
-	"github.com/tuanta7/ekko/internal/manager"
+	"github.com/tuanta7/ekko/internal/handler"
 	"github.com/tuanta7/ekko/pkg/logger"
 )
 
@@ -34,14 +34,14 @@ type Model struct {
 	isStopping        bool
 	errorMsg          string
 
-	handler *manager.Handler
+	handler *handler.Handler
 	stream  <-chan string
 	ctx     context.Context
 	cancel  context.CancelFunc
 	logger  *logger.Logger
 }
 
-func NewModel(app *manager.Handler, logger *logger.Logger) *Model {
+func NewModel(app *handler.Handler, logger *logger.Logger) *Model {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	sp := spinner.New()

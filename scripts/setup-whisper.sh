@@ -27,5 +27,5 @@ echo "LIBRARY_PATH: $LIBRARY_PATH"
 # If this script is being sourced, don't exit
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then    
   echo -e "${YELLOW}[WARN]${NC} This script should be sourced, not executed directly."    
-  echo "       Use: source ./setup-env.sh"
+  echo "       Use: source ./setup-whisper.sh"
 fi

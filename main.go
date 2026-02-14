@@ -1,40 +1,33 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
-	"os"
-	"os/signal"
 
 	tea "github.com/charmbracelet/bubbletea"
 	_ "github.com/joho/godotenv/autoload"
-	"github.com/tuanta7/ekko/internal/audio"
-	"github.com/tuanta7/ekko/internal/manager"
-	"github.com/tuanta7/ekko/internal/scribe"
+	"github.com/tuanta7/ekko/internal/ffmpeg"
+	"github.com/tuanta7/ekko/internal/handler"
 	"github.com/tuanta7/ekko/internal/transport/console"
+	"github.com/tuanta7/ekko/internal/whisper"
+	"github.com/tuanta7/ekko/pkg/logger"
+	"github.com/tuanta7/ekko/pkg/silent"
+	"go.uber.org/zap"
 )
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
-
-	mode := scribe.Mode(os.Getenv("TRANSCRIBER_MODE"))
-	s, err := scribe.NewScribe(ctx, mode, os.Getenv("GEMINI_API_KEY"))
+	scriber, err := whisper.NewClient()
 	if err != nil {
 		log.Fatalf("Failed to create transcriber client: %v", err)
 	}
-	defer func(scriber scribe.Scriber) {
-		if err = scriber.Close(); err != nil {
-			fmt.Printf("Failed to close transcriber client: %v", err)
-		}
-	}(s)
+	defer silent.Close(scriber)
 
-	recorder := audio.NewFFmpegRecorder()
+	zl, err := logger.New(zap.DebugLevel)
+	silent.PanicOnErr(err, "Failed to create logger")
 
-	app := manager.NewHandler(recorder, s, fl)
-	_, err = tea.NewProgram(console.NewModel(app, fl)).Run()
-	if err != nil {
-		log.Fatalf("Alas, there's been an error: %v", err)
-	}
+	recorder, err := ffmpeg.NewRecorder()
+	silent.PanicOnErr(err, "Failed to create recorder")
+
+	app := handler.NewHandler(recorder, scriber, zl)
+	_, err = tea.NewProgram(console.NewModel(app, zl)).Run()
+	silent.PanicOnErr(err, "Failed to run program")
 }

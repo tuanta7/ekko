@@ -5,7 +5,7 @@ SHELL := /bin/bash
 install:
 	./scripts/install.sh
 
-build:
+build: install
 	./scripts/build-whisper.sh
 
 dev:
