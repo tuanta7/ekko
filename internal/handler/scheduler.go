@@ -11,7 +11,6 @@ import (
 
 var (
 	ErrEnqueueTimeout  = errors.New("enqueue timeout")
-	ErrQueueClosed     = errors.New("scheduler closed")
 	ErrSchedulerClosed = errors.New("scheduler closed")
 )
 
@@ -21,6 +20,9 @@ type Job struct {
 }
 
 type JobHandler func(ctx context.Context, job *Job) error
+
+// ErrorHandler is called when a job processing error occurs.
+type ErrorHandler func(job *Job, err error)
 
 type Scheduler struct {
 	wg          sync.WaitGroup
@@ -38,14 +40,15 @@ func New(bufferSize int) *Scheduler {
 }
 
 // ProcessJobs launches worker goroutines that process jobs using the provided handler.
-func (s *Scheduler) ProcessJobs(ctx context.Context, handler JobHandler) {
+// It runs in the background and calls onError for any processing errors.
+func (s *Scheduler) ProcessJobs(ctx context.Context, onJob JobHandler, onError ErrorHandler) {
 	for i := 0; i < s.workerCount; i++ {
 		s.wg.Add(1)
-		go s.startWorker(ctx, handler)
+		go s.startWorker(ctx, onJob, onError)
 	}
 }
 
-func (s *Scheduler) startWorker(ctx context.Context, handler JobHandler) {
+func (s *Scheduler) startWorker(ctx context.Context, handler JobHandler, onError ErrorHandler) {
 	defer s.wg.Done()
 
 	for {
@@ -56,7 +59,11 @@ func (s *Scheduler) startWorker(ctx context.Context, handler JobHandler) {
 			if !ok {
 				return
 			}
-			_ = handler(ctx, job)
+			if err := handler(ctx, job); err != nil {
+				if onError != nil {
+					onError(job, err)
+				}
+			}
 		}
 	}
 }

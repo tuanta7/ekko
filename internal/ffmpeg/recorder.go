@@ -60,7 +60,7 @@ func (r *Recorder) ListSources(ctx context.Context) ([]string, error) {
 }
 
 func (r *Recorder) Record(ctx context.Context, duration time.Duration) ([]float32, error) {
-	filePath := fmt.Sprintf("/tmp/whisper-%d.wav", time.Now().UnixNano())
+	filePath := fmt.Sprintf("tmp/whisper-%d.wav", time.Now().UnixNano())
 
 	cmd := exec.CommandContext(ctx, "ffmpeg", "-f", "pulse",
 		"-i", r.source,

@@ -2,6 +2,7 @@ package console
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -19,20 +20,21 @@ type Model struct {
 	transcript  viewport.Model
 	menuOptions []string
 
-	ctx     context.Context
-	cancel  context.CancelFunc
-	handler *handler.Handler
+	ctx            context.Context
+	cancel         context.CancelFunc
+	handler        *handler.Handler
+	transcriptChan chan string
 
 	// states
 	sourcesLoaded       bool
 	selectedSourceIndex int
 	audioSources        []string
 	chunkDuration       time.Duration
+	transcriptContent   string
+	isRecording         bool
 }
 
 func NewModel(handler *handler.Handler) *Model {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	spinnerView := spinner.New()
 	spinnerView.Spinner = spinner.Dot
 
@@ -44,8 +46,6 @@ func NewModel(handler *handler.Handler) *Model {
 		spinner:       spinnerView,
 		transcript:    transcriptView,
 		menuOptions:   menuOptions,
-		ctx:           ctx,
-		cancel:        cancel,
 		handler:       handler,
 		chunkDuration: defaultChunkDuration,
 	}
@@ -53,7 +53,7 @@ func NewModel(handler *handler.Handler) *Model {
 
 func (m *Model) Init() tea.Cmd {
 	return func() tea.Msg {
-		sources, err := m.handler.ListSources(m.ctx)
+		sources, err := m.handler.ListSources(context.Background())
 		return sourcesLoadedMsg{
 			sources: sources,
 			err:     err,
@@ -64,7 +64,10 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) handleMenuSelection() (tea.Model, tea.Cmd) {
 	switch m.cursor {
 	case optionStartSession:
-		return m, nil
+		if len(m.audioSources) == 0 {
+			return m, nil
+		}
+		return m.startSession()
 	case optionAudioSource:
 		return m, nil
 	case optionChunkDuration:
@@ -72,6 +75,82 @@ func (m *Model) handleMenuSelection() (tea.Model, tea.Cmd) {
 	default:
 		return m, tea.Quit
 	}
+}
+
+func (m *Model) startSession() (tea.Model, tea.Cmd) {
+	m.screen = screenRecording
+	m.isRecording = true
+	m.transcriptContent = ""
+	m.transcript.SetContent("Recording started...\n")
+
+	source := m.audioSources[m.selectedSourceIndex]
+	chunkDuration := m.chunkDuration
+
+	ctx, cancel := context.WithCancel(context.Background())
+	m.ctx = ctx
+	m.cancel = cancel
+	m.transcriptChan = make(chan string, 100)
+
+	go m.handler.CollectResults(ctx, func(text string) {
+		select {
+		case m.transcriptChan <- text:
+		case <-ctx.Done():
+		}
+	})
+
+	return m, tea.Batch(
+		m.spinner.Tick,
+		m.startRecording(source, chunkDuration),
+		m.startTranscribe(),
+		m.waitForTranscript(),
+	)
+}
+
+func (m *Model) startRecording(source string, chunkDuration time.Duration) tea.Cmd {
+	return func() tea.Msg {
+		err := m.handler.StartRecord(m.ctx, chunkDuration, source)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return recordingErrorMsg{err: err}
+		}
+		return nil
+	}
+}
+
+func (m *Model) startTranscribe() tea.Cmd {
+	return func() tea.Msg {
+		m.handler.StartTranscribe(m.ctx)
+		return nil
+	}
+}
+
+func (m *Model) waitForTranscript() tea.Cmd {
+	return func() tea.Msg {
+		select {
+		case text, ok := <-m.transcriptChan:
+			if !ok {
+				return sessionEndMsg{err: nil}
+			}
+			return transcriptUpdateMsg{text: text}
+		case <-m.ctx.Done():
+			return sessionEndMsg{err: m.ctx.Err()}
+		}
+	}
+}
+
+func (m *Model) stopSession() (tea.Model, tea.Cmd) {
+	if m.cancel != nil {
+		m.cancel()
+		m.cancel = nil
+
+	}
+
+	m.ctx = nil
+	m.isRecording = false
+
+	m.handler.Close()
+
+	m.screen = screenMenu
+	return m, nil
 }
 
 func (m *Model) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -113,8 +192,11 @@ func (m *Model) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case screenRecording:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
+			m.stopSession()
 			return m, tea.Quit
+		case "q", "s":
+			return m.stopSession()
 		default:
 			var cmd tea.Cmd
 			m.transcript, cmd = m.transcript.Update(msg)
@@ -140,7 +222,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(mt)
 		return m, cmd
+	case transcriptUpdateMsg:
+		if m.isRecording {
+			m.transcriptContent += mt.text
+			m.transcript.SetContent(m.transcriptContent)
+			m.transcript.GotoBottom()
+			return m, m.waitForTranscript()
+		}
+		return m, nil
+	case recordingErrorMsg:
+		m.transcriptContent += fmt.Sprintf("\n[Error: %v]\n", mt.err)
+		m.transcript.SetContent(m.transcriptContent)
+		return m.stopSession()
 	case sessionEndMsg:
+		m.isRecording = false
 		m.screen = screenMenu
 		return m, nil
 	default:
