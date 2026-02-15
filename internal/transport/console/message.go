@@ -1,42 +1,22 @@
 package console
 
 import (
-	"fmt"
-
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type sourcesLoadedMsg struct {
+	sources []string
+	err     error
+}
+
 type sessionEndMsg struct {
-	Error error
+	err error
 }
 
 func (m *Model) sessionEnd(err error) tea.Cmd {
 	return func() tea.Msg {
 		return sessionEndMsg{
-			Error: err,
-		}
-	}
-}
-
-type transcriptMsg struct {
-	chunk string
-}
-
-func (m *Model) waitForTranscript() tea.Cmd {
-	return func() tea.Msg {
-		select {
-		case <-m.ctx.Done():
-			return sessionEndMsg{Error: nil}
-		case chunk, ok := <-m.stream:
-			if !ok {
-				err := m.handler.Stop()
-				if err == nil {
-					err = fmt.Errorf("stream closed")
-				}
-
-				return m.sessionEnd(err)
-			}
-			return transcriptMsg{chunk: chunk}
+			err: err,
 		}
 	}
 }

@@ -15,7 +15,7 @@ type Client struct {
 }
 
 func NewClient() (*Client, error) {
-	model, err := whisper.New(fmt.Sprintf("models/%s.bin", os.Getenv("MODEL_NAME")))
+	model, err := whisper.New(fmt.Sprintf("ggml/%s.bin", os.Getenv("MODEL_NAME")))
 	if err != nil {
 		return nil, err
 	}

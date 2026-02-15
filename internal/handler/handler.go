@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,6 +20,7 @@ type Handler struct {
 	scriber   *whisper.Client
 	scheduler *Scheduler
 	logger    *logger.Logger
+	out       chan string
 }
 
 func NewHandler(recorder *ffmpeg.Recorder, scriber *whisper.Client, logger *logger.Logger) *Handler {
@@ -26,12 +28,23 @@ func NewHandler(recorder *ffmpeg.Recorder, scriber *whisper.Client, logger *logg
 		recorder: recorder,
 		scriber:  scriber,
 		logger:   logger,
+		out:      make(chan string, 100),
 	}
 }
 
-func (h *Handler) StartRecord(ctx context.Context, chunkDuration time.Duration) error {
+func (h *Handler) StartRecord(ctx context.Context, chunkDuration time.Duration, source ...string) error {
 	errChan := make(chan error)
 	defer close(errChan)
+
+	if len(source) == 0 {
+		defaultSources, err := h.recorder.ListSources(ctx)
+		if err != nil {
+			return err
+		}
+		source = defaultSources
+	} else {
+		h.recorder.SetSource(source[0])
+	}
 
 	go func() {
 		select {
@@ -60,7 +73,26 @@ func (h *Handler) StartRecord(ctx context.Context, chunkDuration time.Duration) 
 	return err
 }
 
-func (h *Handler) StartTranscribe(ctx context.Context) {}
+func (h *Handler) StartTranscribe(ctx context.Context) {
+	h.scheduler.ProcessJobs(ctx, func(ctx context.Context, job *Job) error {
+		return h.scriber.Transcribe(ctx, job.RawData, h.out)
+	})
+}
+
+func (h *Handler) CollectResults(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case result := <-h.out:
+			fmt.Println(result)
+		}
+	}
+}
+
+func (h *Handler) ListSources(ctx context.Context) ([]string, error) {
+	return h.recorder.ListSources(ctx)
+}
 
 func (h *Handler) Stop() error {
 	h.counter.Store(0)

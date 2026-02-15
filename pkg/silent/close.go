@@ -8,7 +8,7 @@ import (
 
 func Close(srv io.Closer) {
 	if err := srv.Close(); err != nil {
-		log.Printf("Error while closing: %s", err)
+		log.Printf("err while closing: %s", err)
 	}
 }
 

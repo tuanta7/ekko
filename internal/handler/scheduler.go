@@ -37,15 +37,15 @@ func New(bufferSize int) *Scheduler {
 	}
 }
 
-// Start launches worker goroutines that process jobs using the provided handler.
-func (s *Scheduler) Start(ctx context.Context, handler JobHandler) {
+// ProcessJobs launches worker goroutines that process jobs using the provided handler.
+func (s *Scheduler) ProcessJobs(ctx context.Context, handler JobHandler) {
 	for i := 0; i < s.workerCount; i++ {
 		s.wg.Add(1)
-		go s.worker(ctx, handler)
+		go s.startWorker(ctx, handler)
 	}
 }
 
-func (s *Scheduler) worker(ctx context.Context, handler JobHandler) {
+func (s *Scheduler) startWorker(ctx context.Context, handler JobHandler) {
 	defer s.wg.Done()
 
 	for {
@@ -78,19 +78,6 @@ func (s *Scheduler) Enqueue(ctx context.Context, job *Job) error {
 			return ErrEnqueueTimeout
 		}
 		return ctx.Err()
-	}
-}
-
-// Dequeue retrieves a job from the scheduler.
-func (s *Scheduler) Dequeue(ctx context.Context) (*Job, error) {
-	select {
-	case job, ok := <-s.queue:
-		if !ok {
-			return nil, ErrQueueClosed
-		}
-		return job, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
 	}
 }
 

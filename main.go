@@ -28,6 +28,6 @@ func main() {
 	silent.PanicOnErr(err, "Failed to create recorder")
 
 	app := handler.NewHandler(recorder, scriber, zl)
-	_, err = tea.NewProgram(console.NewModel(app, zl)).Run()
+	_, err = tea.NewProgram(console.NewModel(app)).Run()
 	silent.PanicOnErr(err, "Failed to run program")
 }
