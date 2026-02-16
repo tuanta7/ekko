@@ -1,16 +1,17 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/tuanta7/ekko/internal/ffmpeg"
 	"github.com/tuanta7/ekko/internal/handler"
-	"github.com/tuanta7/ekko/internal/transport/console"
 	"github.com/tuanta7/ekko/internal/whisper"
 	"github.com/tuanta7/ekko/pkg/logger"
 	"github.com/tuanta7/ekko/pkg/silent"
+	"github.com/urfave/cli/v3"
 	"go.uber.org/zap"
 )
 
@@ -27,7 +28,22 @@ func main() {
 	recorder, err := ffmpeg.NewRecorder()
 	silent.PanicOnErr(err, "Failed to create recorder")
 
-	app := handler.NewHandler(recorder, scriber, zl)
-	_, err = tea.NewProgram(console.NewModel(app)).Run()
-	silent.PanicOnErr(err, "Failed to run program")
+	h := handler.NewHandler(recorder, scriber, zl)
+	defer h.Close()
+
+	cmd := &cli.Command{
+		Name:  "ekko",
+		Usage: "Ekko is a CLI tool for transcribing audio files using whisper-cpp.",
+		Commands: []*cli.Command{
+			RunCommand(h),
+		},
+		Action: func(ctx context.Context, command *cli.Command) error {
+			return nil
+		},
+	}
+
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
+		log.Fatal(err)
+	}
+
 }

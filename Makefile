@@ -10,7 +10,13 @@ build: install
 
 dev:
 	source ./scripts/setup-whisper.sh
-	go run .
+	go build -o ekko ./cmd/ekko
+	./ekko run --web
+
+start:
+	source ./scripts/setup-whisper.sh
+	go build -o ekko ./cmd/ekko
+	./ekko run
 
 env:
 	awk -F'=' 'BEGIN {OFS="="} \
