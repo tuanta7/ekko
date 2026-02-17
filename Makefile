@@ -11,7 +11,7 @@ build: install
 dev:
 	source ./scripts/setup-whisper.sh
 	go build -o ekko ./cmd/ekko
-	./ekko run --web
+	./ekko run --server :8080
 
 start:
 	source ./scripts/setup-whisper.sh

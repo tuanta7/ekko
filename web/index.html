@@ -4,10 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>HTML 5 Boilerplate</title>
+    <title>Live Ekko</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<script src="index.js"></script>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>Ekko</h1>
+            </div>
+            <div class="status" id="status">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <main class="transcription-container">
+            <div class="transcription-list" id="transcription-list">
+                <!-- Transcription items will be added here -->
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="controls">
+                <button id="clear-btn" class="btn">Clear</button>
+                <button id="copy-btn" class="btn">Copy All</button>
+            </div>
+        </footer>
+    </div>
+    <script src="index.js"></script>
 </body>
 </html>

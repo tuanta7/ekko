@@ -3,7 +3,6 @@ package whisper
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 
 	"github.com/ggerganov/whisper.cpp/bindings/go/pkg/whisper"
@@ -13,8 +12,8 @@ type Client struct {
 	model whisper.Model
 }
 
-func NewClient() (*Client, error) {
-	model, err := whisper.New(fmt.Sprintf("ggml/%s.bin", os.Getenv("MODEL_NAME")))
+func NewClient(modelName string) (*Client, error) {
+	model, err := whisper.New(fmt.Sprintf("ggml/%s.bin", modelName))
 	if err != nil {
 		return nil, err
 	}
