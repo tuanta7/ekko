@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/signal"
@@ -32,7 +33,14 @@ func (s *Server) Run(addr string) error {
 		c.Set("Cache-Control", "no-cache")
 		c.Set("Connection", "keep-alive")
 		c.Set("Transfer-Encoding", "chunked")
-		c.Status(fiber.StatusOK)
+
+		c.Status(fiber.StatusOK).RequestCtx().SetBodyStreamWriter(func(w *bufio.Writer) {
+			for {
+				fmt.Fprintf(w, "data: Message: %s\n\n", "message")
+				_ = w.Flush()
+				time.Sleep(10 * time.Second)
+			}
+		})
 
 		return nil
 	})
