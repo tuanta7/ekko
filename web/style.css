@@ -133,6 +133,51 @@ body {
     font-size: 0.875rem;
 }
 
+/* Processing animation */
+.processing {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.processing.active {
+    display: flex;
+}
+
+.processing-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #999;
+    animation: processingPulse 1.4s ease-in-out infinite;
+}
+
+.processing-dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.processing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.processing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes processingPulse {
+    0%, 80%, 100% {
+        transform: scale(0.6);
+        opacity: 0.4;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 /* Settings */
 .settings {
     background: #fff;

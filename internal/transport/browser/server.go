@@ -31,14 +31,8 @@ func NewServer(handler *handler.Handler) *Server {
 	}
 }
 
-type StartRequest struct {
-	Source   string `json:"source"`
-	Duration int    `json:"duration"`
-}
-
 func (s *Server) Run(addr string) error {
 	s.engine.Get("/sse", func(c fiber.Ctx) error {
-		// Check if session is active
 		if s.ctx == nil || s.transcriptChan == nil {
 			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 				"error": "no active session",
@@ -56,19 +50,19 @@ func (s *Server) Run(addr string) error {
 
 			for {
 				select {
-				case text, ok := <-s.transcriptChan:
-					if !ok {
-						// Channel closed, session ended
-						_, _ = fmt.Fprintf(w, "data: {\"type\":\"ended\"}\n\n")
-						_ = w.Flush()
-						return
-					}
-					_, _ = fmt.Fprintf(w, "data: {\"text\":\"%s\"}\n\n", text)
-					_ = w.Flush()
 				case <-s.ctx.Done():
 					_, _ = fmt.Fprintf(w, "data: {\"type\":\"ended\"}\n\n")
 					_ = w.Flush()
 					return
+				case text, ok := <-s.transcriptChan:
+					if !ok { // Channel closed, session ended
+						_, _ = fmt.Fprintf(w, "data: {\"type\":\"ended\"}\n\n")
+						_ = w.Flush()
+						return
+					}
+
+					_, _ = fmt.Fprintf(w, "data: {\"text\":\"%s\"}\n\n", text)
+					_ = w.Flush()
 				}
 			}
 		})

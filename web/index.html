@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Live Ekko</title>
+    <title>Ekko Live</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦻🏽</text></svg>">
 </head>
 <body>
     <div class="container">
@@ -25,6 +26,11 @@
             <div class="transcription-list" id="transcription-list">
                 <!-- Transcription items will be added here -->
             </div>
+            <div class="processing" id="processing">
+                <span class="processing-dot"></span>
+                <span class="processing-dot"></span>
+                <span class="processing-dot"></span>
+            </div>
         </main>
 
         <section class="settings" id="settings">
@@ -38,7 +44,7 @@
                 <label>Chunk Duration</label>
                 <div class="duration-control">
                     <button id="duration-dec" class="btn-small">−</button>
-                    <span id="duration-value">5s</span>
+                    <span id="duration-value">3s</span>
                     <button id="duration-inc" class="btn-small">+</button>
                 </div>
             </div>

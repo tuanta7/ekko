@@ -1,6 +1,6 @@
 # Ekko
 
-<img align="right" src="./logo.png" alt="Ekko Mascot" width="150"/>
+<img align="right" src="web/logo.png" alt="Ekko Mascot" width="150"/>
 
 ![Status](https://img.shields.io/badge/status-development-orange)
 ![Language](https://img.shields.io/badge/lang-Go-blue)

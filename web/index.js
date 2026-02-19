@@ -1,6 +1,7 @@
 const statusEl = document.getElementById('status');
 const statusText = statusEl.querySelector('.status-text');
 const transcriptionList = document.getElementById('transcription-list');
+const processingEl = document.getElementById('processing');
 const clearBtn = document.getElementById('clear-btn');
 const copyBtn = document.getElementById('copy-btn');
 
@@ -79,6 +80,15 @@ function setStatus(state, message) {
     statusText.textContent = message;
 }
 
+function showProcessing() {
+    processingEl.classList.add('active');
+    transcriptionList.scrollTop = transcriptionList.scrollHeight;
+}
+
+function hideProcessing() {
+    processingEl.classList.remove('active');
+}
+
 function connectSSE() {
     if (typeof EventSource === 'undefined') {
         setStatus('error', 'SSE not supported');
@@ -110,7 +120,9 @@ function connectSSE() {
 
             // Handle transcription
             if (data.text) {
+                hideProcessing();
                 addTranscription(data.text, data.seq);
+                showProcessing(); // Show again for next chunk
             }
         } catch {
             if (event.data) {
@@ -138,6 +150,7 @@ function onSessionEnded() {
     settingsEl.classList.remove('recording');
     startBtn.disabled = false;
     stopBtn.disabled = true;
+    hideProcessing();
     setStatus('', 'Ready');
 }
 
@@ -228,14 +241,14 @@ startBtn.addEventListener('click', async () => {
             isRecording = true;
             settingsEl.classList.add('recording');
             stopBtn.disabled = false;
+            showProcessing();
 
             // Connect SSE after session starts
             connectSSE();
-        } else {
+        }
             const err = await res.json();
             startBtn.disabled = false;
             setStatus('error', err.error || 'Failed to start');
-        }
     } catch (err) {
         startBtn.disabled = false;
         setStatus('error', 'Error: ' + err.message);
