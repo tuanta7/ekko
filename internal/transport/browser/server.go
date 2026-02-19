@@ -87,31 +87,21 @@ func (s *Server) Run(addr string) error {
 	})
 
 	s.engine.Post("/start", func(c fiber.Ctx) error {
-		// Check if session already active
-		if s.ctx != nil {
+		if s.ctx != nil || s.transcriptChan != nil {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"error": "session already active",
 			})
 		}
 
 		var req struct {
-			Source   string `json:"source"`
-			Duration int    `json:"duration"`
+			Source   string `json:"source" validate:"required"`
+			Duration int    `json:"duration" validate:"gte=1,lte=300"`
 		}
 		if err := c.Bind().JSON(&req); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": "invalid request body",
+				"cause": err.Error(),
 			})
-		}
-
-		if req.Source == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "source is required",
-			})
-		}
-
-		if req.Duration < 1 {
-			req.Duration = 5
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -120,7 +110,8 @@ func (s *Server) Run(addr string) error {
 		s.transcriptChan = make(chan string, 100)
 
 		go func() {
-			_ = s.handler.StartRecord(ctx, time.Duration(req.Duration)*time.Second, req.Source)
+			duration := time.Duration(req.Duration) * time.Second
+			_ = s.handler.StartRecord(ctx, duration, req.Source)
 		}()
 
 		go s.handler.StartTranscribe(ctx)
@@ -143,16 +134,14 @@ func (s *Server) Run(addr string) error {
 		}
 
 		s.cancel()
-		s.handler.Close()
 
-		// Close channel to signal SSE clients
+		s.cancel = nil
+		s.ctx = nil
+
 		if s.transcriptChan != nil {
 			close(s.transcriptChan)
 			s.transcriptChan = nil
 		}
-
-		s.cancel = nil
-		s.ctx = nil
 
 		return c.JSON(fiber.Map{"status": "stopped"})
 	})

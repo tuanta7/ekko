@@ -40,6 +40,18 @@ func NewHandler(recorder *ffmpeg.Recorder, scriber *whisper.Client, logger *logg
 	}
 }
 
+func (h *Handler) Close() {
+	h.counter.Store(0)
+	err := h.scheduler.Close()
+	if err != nil {
+		h.logger.Error("failed to close scheduler", zap.Error(err))
+	}
+}
+
+func (h *Handler) ListSources(ctx context.Context) ([]string, error) {
+	return h.recorder.ListSources(ctx)
+}
+
 func (h *Handler) StartRecord(ctx context.Context, chunkDuration time.Duration, source ...string) error {
 	if len(source) == 0 {
 		defaultSources, err := h.recorder.ListSources(ctx)
@@ -102,54 +114,34 @@ func (h *Handler) StartTranscribe(ctx context.Context) {
 // It buffers out-of-order results and flushes them after a timeout to prevent
 // indefinite waiting for missing sequences.
 func (h *Handler) CollectResults(ctx context.Context, output func(text string)) {
-	timer := time.NewTimer(flushTimeout)
-	defer timer.Stop()
-
 	var nextSeq uint32 = 1
 	buffer := make(map[uint32]string)
 
-	flush := func() { // Output buffered results in order
-		for {
-			if text, ok := buffer[nextSeq]; ok {
-				output(text)
-				delete(buffer, nextSeq)
-				nextSeq++
-			} else {
-				break
-			}
-		}
-	}
-
-	flushAll := func() {
-		if len(buffer) == 0 {
-			return
-		}
-
-		// Find minimum seq in the buffer to continue from
-		minSeq := nextSeq
-		for seq := range buffer {
-			if seq < minSeq || minSeq == nextSeq {
-				minSeq = seq
-			}
-		}
-		nextSeq = minSeq
-		flush()
-	}
+	timer := time.NewTimer(flushTimeout)
+	defer timer.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			flushAll()
+			nextSeq = h.flushAll(buffer, nextSeq, output)
 			return
-
+		case <-timer.C: // Timeout: flush what we can, skip gaps if necessary
+			if len(buffer) > 0 {
+				h.logger.Warn("flush timeout, skipping gaps",
+					zap.Uint32("expected", nextSeq),
+					zap.Int("buffered", len(buffer)),
+				)
+				nextSeq = h.flushAll(buffer, nextSeq, output)
+			}
+			timer.Reset(flushTimeout)
 		case result, ok := <-h.out:
 			if !ok {
-				flushAll()
+				nextSeq = h.flushAll(buffer, nextSeq, output)
 				return
 			}
 
 			buffer[result.SeqNumber] = result.Text
-			flush()
+			nextSeq = h.flushNext(buffer, nextSeq, output)
 
 			// Reset timer
 			if !timer.Stop() {
@@ -158,29 +150,41 @@ func (h *Handler) CollectResults(ctx context.Context, output func(text string)) 
 				default:
 				}
 			}
-			timer.Reset(flushTimeout)
 
-		case <-timer.C: // Timeout: flush what we can, skip gaps if necessary
-			if len(buffer) > 0 {
-				h.logger.Warn("flush timeout, skipping gaps",
-					zap.Uint32("expected", nextSeq),
-					zap.Int("buffered", len(buffer)),
-				)
-				flushAll()
-			}
 			timer.Reset(flushTimeout)
 		}
 	}
 }
 
-func (h *Handler) ListSources(ctx context.Context) ([]string, error) {
-	return h.recorder.ListSources(ctx)
+// flushNext outputs buffered results in order from the given sequence number
+func (h *Handler) flushNext(buffer map[uint32]string, nextSeq uint32, output func(text string)) uint32 {
+	for {
+		text, ok := buffer[nextSeq]
+		if !ok {
+			break
+		}
+
+		output(text)
+		delete(buffer, nextSeq)
+		nextSeq++
+	}
+
+	return nextSeq
 }
 
-func (h *Handler) Close() {
-	h.counter.Store(0)
-	err := h.scheduler.Close()
-	if err != nil {
-		h.logger.Error("failed to close scheduler", zap.Error(err))
+// flushAll outputs buffered results in order, starting from the minimum sequence number
+func (h *Handler) flushAll(buffer map[uint32]string, nextSeq uint32, output func(text string)) uint32 {
+	if len(buffer) == 0 {
+		return 1
 	}
+
+	// Find minimum seq in the buffer to continue from
+	minSeq := nextSeq
+	for seq := range buffer {
+		if seq < minSeq || minSeq == nextSeq {
+			minSeq = seq
+		}
+	}
+
+	return h.flushNext(buffer, minSeq, output)
 }
