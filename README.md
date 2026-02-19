@@ -6,17 +6,15 @@
 ![Language](https://img.shields.io/badge/lang-Go-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A near real-time desktop audio transcription tool with a clean terminal UI. Capture system audio, transcribe on the fly using local Whisper models or Google Gemini API
+A near real-time desktop audio transcription tool with a clean terminal and web UI. Capture system audio, transcribe on the fly using local Whisper models or Google Gemini API
 
 ## Key features
 
 - Local and cloud transcription backends: whisper (local) and gemini (Google API).
 - Privacy-first local mode when using Whisper models; no network round trips.
-- Clean TUI for live transcription and simple controls.
+- Clean UI for live transcription and simple controls.
 
 ![Demo](demo.gif)
-
-> Darts scene from Ted Lasso (2x speed)
 
 ## Quick Start
 
