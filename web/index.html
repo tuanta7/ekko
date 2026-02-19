@@ -19,14 +19,36 @@
             </div>
         </header>
 
+
+
         <main class="transcription-container">
             <div class="transcription-list" id="transcription-list">
                 <!-- Transcription items will be added here -->
             </div>
         </main>
 
+        <section class="settings" id="settings">
+            <div class="setting-row">
+                <label for="source-select">Audio Source</label>
+                <select id="source-select">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <label>Chunk Duration</label>
+                <div class="duration-control">
+                    <button id="duration-dec" class="btn-small">−</button>
+                    <span id="duration-value">5s</span>
+                    <button id="duration-inc" class="btn-small">+</button>
+                </div>
+            </div>
+
+        </section>
+
         <footer class="footer">
+            <button id="start-btn" class="btn btn-primary">Start Recording</button>
             <div class="controls">
+                <button id="stop-btn" class="btn" disabled>Stop</button>
                 <button id="clear-btn" class="btn">Clear</button>
                 <button id="copy-btn" class="btn">Copy All</button>
             </div>

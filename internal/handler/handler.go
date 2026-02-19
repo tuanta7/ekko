@@ -108,8 +108,7 @@ func (h *Handler) CollectResults(ctx context.Context, output func(text string)) 
 	var nextSeq uint32 = 1
 	buffer := make(map[uint32]string)
 
-	flush := func() {
-		// Output buffered results in order
+	flush := func() { // Output buffered results in order
 		for {
 			if text, ok := buffer[nextSeq]; ok {
 				output(text)
@@ -125,7 +124,8 @@ func (h *Handler) CollectResults(ctx context.Context, output func(text string)) 
 		if len(buffer) == 0 {
 			return
 		}
-		// Find minimum seq in buffer to continue from
+
+		// Find minimum seq in the buffer to continue from
 		minSeq := nextSeq
 		for seq := range buffer {
 			if seq < minSeq || minSeq == nextSeq {
@@ -160,8 +160,7 @@ func (h *Handler) CollectResults(ctx context.Context, output func(text string)) 
 			}
 			timer.Reset(flushTimeout)
 
-		case <-timer.C:
-			// Timeout: flush what we can, skip gaps if necessary
+		case <-timer.C: // Timeout: flush what we can, skip gaps if necessary
 			if len(buffer) > 0 {
 				h.logger.Warn("flush timeout, skipping gaps",
 					zap.Uint32("expected", nextSeq),

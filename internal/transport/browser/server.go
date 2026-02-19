@@ -2,6 +2,7 @@ package browser
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -14,8 +15,11 @@ import (
 )
 
 type Server struct {
-	engine  *fiber.App
-	handler *handler.Handler
+	engine         *fiber.App
+	handler        *handler.Handler
+	ctx            context.Context
+	cancel         context.CancelFunc
+	transcriptChan chan string
 }
 
 func NewServer(handler *handler.Handler) *Server {
@@ -27,23 +31,132 @@ func NewServer(handler *handler.Handler) *Server {
 	}
 }
 
+type StartRequest struct {
+	Source   string `json:"source"`
+	Duration int    `json:"duration"`
+}
+
 func (s *Server) Run(addr string) error {
 	s.engine.Get("/sse", func(c fiber.Ctx) error {
+		// Check if session is active
+		if s.ctx == nil || s.transcriptChan == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "no active session",
+			})
+		}
+
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
 		c.Set("Connection", "keep-alive")
 		c.Set("Transfer-Encoding", "chunked")
 
 		c.Status(fiber.StatusOK).RequestCtx().SetBodyStreamWriter(func(w *bufio.Writer) {
+			_, _ = fmt.Fprintf(w, "data: {\"type\":\"connected\"}\n\n")
+			_ = w.Flush()
+
 			for {
-				fmt.Fprintf(w, "data: Message: %s\n\n", "message")
-				_ = w.Flush()
-				time.Sleep(10 * time.Second)
+				select {
+				case text, ok := <-s.transcriptChan:
+					if !ok {
+						// Channel closed, session ended
+						_, _ = fmt.Fprintf(w, "data: {\"type\":\"ended\"}\n\n")
+						_ = w.Flush()
+						return
+					}
+					_, _ = fmt.Fprintf(w, "data: {\"text\":\"%s\"}\n\n", text)
+					_ = w.Flush()
+				case <-s.ctx.Done():
+					_, _ = fmt.Fprintf(w, "data: {\"type\":\"ended\"}\n\n")
+					_ = w.Flush()
+					return
+				}
 			}
 		})
 
 		return nil
 	})
+
+	s.engine.Get("/sources", func(c fiber.Ctx) error {
+		sources, err := s.handler.ListSources(c.Context())
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		return c.JSON(sources)
+	})
+
+	s.engine.Post("/start", func(c fiber.Ctx) error {
+		// Check if session already active
+		if s.ctx != nil {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "session already active",
+			})
+		}
+
+		var req struct {
+			Source   string `json:"source"`
+			Duration int    `json:"duration"`
+		}
+		if err := c.Bind().JSON(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "invalid request body",
+			})
+		}
+
+		if req.Source == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "source is required",
+			})
+		}
+
+		if req.Duration < 1 {
+			req.Duration = 5
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		s.ctx = ctx
+		s.cancel = cancel
+		s.transcriptChan = make(chan string, 100)
+
+		go func() {
+			_ = s.handler.StartRecord(ctx, time.Duration(req.Duration)*time.Second, req.Source)
+		}()
+
+		go s.handler.StartTranscribe(ctx)
+
+		go s.handler.CollectResults(ctx, func(text string) {
+			select {
+			case s.transcriptChan <- text:
+			case <-ctx.Done():
+			}
+		})
+
+		return c.JSON(fiber.Map{"status": "started"})
+	})
+
+	s.engine.Post("/stop", func(c fiber.Ctx) error {
+		if s.cancel == nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "no active session",
+			})
+		}
+
+		s.cancel()
+		s.handler.Close()
+
+		// Close channel to signal SSE clients
+		if s.transcriptChan != nil {
+			close(s.transcriptChan)
+			s.transcriptChan = nil
+		}
+
+		s.cancel = nil
+		s.ctx = nil
+
+		return c.JSON(fiber.Map{"status": "stopped"})
+	})
+
 	s.engine.Get("/*", static.New("./web", static.Config{
 		Browse: true,
 	}))
