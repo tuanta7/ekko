@@ -11,16 +11,9 @@ build: install
 dev:
 	source ./scripts/setup-whisper.sh
 	go build -o ekko ./cmd/ekko
-	./ekko run --server :8080
+	./ekko run --server :8080 --model ggml-medium-q5_0
 
 start:
 	source ./scripts/setup-whisper.sh
 	go build -o ekko ./cmd/ekko
 	./ekko run
-
-env:
-	awk -F'=' 'BEGIN {OFS="="} \
-    	/^[[:space:]]*#/ {print; next} \
-    	/^[[:space:]]*$$/ {print ""; next} \
-    	NF>=1 {gsub(/^[[:space:]]+|[[:space:]]+$$/, "", $$1); print $$1"="}' .env > .env.example
-	echo ".env.example generated successfully."

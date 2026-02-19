@@ -56,6 +56,7 @@ func (h *Handler) StartRecord(ctx context.Context, chunkDuration time.Duration, 
 	if len(source) == 0 {
 		defaultSources, err := h.recorder.ListSources(ctx)
 		if err != nil {
+			h.logger.Error("failed to list sources", zap.Error(err))
 			return err
 		}
 		h.recorder.SetSource(defaultSources[0])
@@ -70,6 +71,7 @@ func (h *Handler) StartRecord(ctx context.Context, chunkDuration time.Duration, 
 		default:
 			data, err := h.recorder.Record(ctx, chunkDuration)
 			if err != nil {
+				h.logger.Error("recording failed", zap.Error(err))
 				return err
 			}
 
@@ -78,6 +80,7 @@ func (h *Handler) StartRecord(ctx context.Context, chunkDuration time.Duration, 
 				RawData:   data,
 			})
 			if err != nil {
+				h.logger.Error("failed to enqueue job", zap.Error(err))
 				return err
 			}
 		}
@@ -89,6 +92,7 @@ func (h *Handler) StartTranscribe(ctx context.Context) {
 		func(ctx context.Context, job *Job) error {
 			text, err := h.scriber.Transcribe(ctx, job.RawData)
 			if err != nil {
+				h.logger.Error("transcription failed", zap.Error(err))
 				return err
 			}
 			select {
@@ -97,6 +101,7 @@ func (h *Handler) StartTranscribe(ctx context.Context) {
 				Text:      text,
 			}:
 			case <-ctx.Done():
+				h.logger.Warn("context cancelled, dropping transcription result", zap.Uint32("seq", job.SeqNumber))
 				return ctx.Err()
 			}
 			return nil
@@ -123,6 +128,7 @@ func (h *Handler) CollectResults(ctx context.Context, output func(text string)) 
 	for {
 		select {
 		case <-ctx.Done():
+			h.logger.Info("context cancelled, flushing remaining results")
 			nextSeq = h.flushAll(buffer, nextSeq, output)
 			return
 		case <-timer.C: // Timeout: flush what we can, skip gaps if necessary
@@ -136,6 +142,7 @@ func (h *Handler) CollectResults(ctx context.Context, output func(text string)) 
 			timer.Reset(flushTimeout)
 		case result, ok := <-h.out:
 			if !ok {
+				h.logger.Info("transcript output channel closed, flushing remaining results")
 				nextSeq = h.flushAll(buffer, nextSeq, output)
 				return
 			}
@@ -152,6 +159,7 @@ func (h *Handler) CollectResults(ctx context.Context, output func(text string)) 
 			}
 
 			timer.Reset(flushTimeout)
+			h.logger.Debug("transcript result received", zap.Uint32("seq", result.SeqNumber))
 		}
 	}
 }
@@ -175,6 +183,7 @@ func (h *Handler) flushNext(buffer map[uint32]string, nextSeq uint32, output fun
 // flushAll outputs buffered results in order, starting from the minimum sequence number
 func (h *Handler) flushAll(buffer map[uint32]string, nextSeq uint32, output func(text string)) uint32 {
 	if len(buffer) == 0 {
+		h.logger.Warn("no buffered results to flush")
 		return 1
 	}
 

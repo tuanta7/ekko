@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -35,7 +34,7 @@ type Scheduler struct {
 func New(bufferSize int) *Scheduler {
 	return &Scheduler{
 		queue:       make(chan *Job, bufferSize),
-		workerCount: max(1, runtime.NumCPU()/2),
+		workerCount: max(1), // ggml backend does not support multiple workers?
 	}
 }
 
