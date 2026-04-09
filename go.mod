@@ -8,8 +8,10 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20251120123511-19ceec8eac98
 	github.com/go-audio/wav v1.1.0
+	github.com/gofiber/fiber/v3 v3.0.0
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.11.1
+	github.com/urfave/cli/v3 v3.6.2
 	go.uber.org/zap v1.27.1
 )
 
@@ -24,7 +26,6 @@ require (
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/go-audio/audio v1.0.0 // indirect
 	github.com/go-audio/riff v1.0.0 // indirect
-	github.com/gofiber/fiber/v3 v3.0.0 // indirect
 	github.com/gofiber/schema v1.7.0 // indirect
 	github.com/gofiber/utils/v2 v2.0.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -41,7 +42,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/tinylib/msgp v1.6.3 // indirect
-	github.com/urfave/cli/v3 v3.6.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.69.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
