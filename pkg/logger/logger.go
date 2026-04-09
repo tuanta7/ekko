@@ -13,7 +13,10 @@ func New(level zapcore.Level) (*Logger, error) {
 	cfg := zap.NewProductionConfig()
 	cfg.Encoding = "json"
 	cfg.Level = zap.NewAtomicLevelAt(level)
-	cfg.OutputPaths = []string{"stdout"}
+
+	// Bubble Tea renders the TUI to stdout, so application logs must go to a file
+	cfg.OutputPaths = []string{"ekko.log"}
+	cfg.ErrorOutputPaths = []string{"ekko.log"}
 
 	zl, err := cfg.Build(
 		zap.AddCaller(),

@@ -10,12 +10,12 @@ install:
 build:
 	./scripts/build-whisper.sh
 
-dev:
+dev: install build
 	source ./scripts/setup-whisper.sh
 	go build -o ekko ./cmd/ekko
 	./ekko run --model $(MODEL)
 
-dev-web:
+dev-web: install build
 	source ./scripts/setup-whisper.sh
 	go build -o ekko ./cmd/ekko
 	./ekko run --web --addr :8080 --model $(MODEL)

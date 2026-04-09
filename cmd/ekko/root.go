@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -14,9 +15,7 @@ import (
 func main() {
 	zl, err := logger.New(zap.DebugLevel)
 	if err != nil {
-		// Can't use project logger if it failed to initialise; fall back to stderr.
-		_, _ = os.Stderr.WriteString("fatal: failed to create logger: " + err.Error() + "\n")
-		os.Exit(1)
+		log.Fatalf("failed to initialize logger: %v", err)
 	}
 
 	recorder, err := ffmpeg.NewRecorder()

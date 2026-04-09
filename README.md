@@ -22,21 +22,6 @@ A near real-time desktop audio transcription tool with a clean terminal and web 
 
 ![OS](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=Ubuntu&logoColor=white)
 
-### 1. Install system dependencies
-
-```sh
-sudo apt update && sudo apt install build-essential
-make install   # installs pulseaudio-utils and ffmpeg
-```
-
-### 2. Build the whisper.cpp Go binding
-
-```sh
-make build
-```
-
-### 3. Download a model
-
 Download a GGML Whisper model from [huggingface.co/ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp/tree/main) and place it in `ggml/`.
 See [`ggml/README.md`](ggml/README.md) for details.
 
@@ -45,7 +30,7 @@ See [`ggml/README.md`](ggml/README.md) for details.
 wget -P ggml/ https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin
 ```
 
-### 4. Run
+Then run the development server:
 
 ```sh
 # TUI mode (default)
@@ -54,22 +39,6 @@ make dev MODEL=ggml-small-q5_1 # override model
 
 # Web mode (serves on :8080)
 make dev-web
-```
-
-Or run the binary directly after building:
-
-```sh
-source ./scripts/setup-whisper.sh
-go build -o ekko ./cmd/ekko
-
-# TUI mode (default)
-./ekko run
-
-# Web mode
-./ekko run --web --addr :8080
-
-# Different model
-./ekko run --model ggml-small-q5_1
 ```
 
 ## CLI reference
@@ -85,24 +54,6 @@ OPTIONS:
    --help, -h              show help
 ```
 
-## Prerequisites
-
-| Dependency | Purpose |
-|---|---|
-| `pulseaudio-utils` | Audio capture (`parecord`) |
-| `ffmpeg` | Audio processing / conversion |
-| Go ≥ 1.22 | Build toolchain |
-| cmake, gcc | Build whisper.cpp native library |
-
-Run `make install` to install the runtime dependencies automatically.
-
-## Troubleshooting
-
-- **`ffmpeg` not found** — run `make install` or `sudo apt install ffmpeg`.
-- **No audio captured** — ensure PulseAudio (or PipeWire with the PulseAudio compatibility layer) is running: `pulseaudio --check`.
-- **Whisper model not found** — confirm the `.bin` file is in `ggml/` and the name passed to `--model` matches (without the `.bin` extension).
-- **`C_INCLUDE_PATH` / `LIBRARY_PATH` errors** — run `source ./scripts/setup-whisper.sh` before building/running outside of Make.
-
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT 
