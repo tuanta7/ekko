@@ -33,12 +33,12 @@ wget -P ggml/ https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-bas
 Then run the development server:
 
 ```sh
-# TUI mode (default)
-make dev                       # uses MODEL=ggml-base by default
-make dev MODEL=ggml-small-q5_1 # override model
-
 # Web mode (serves on :8080)
-make dev-web
+make dev-web                       # uses MODEL=ggml-base by default
+make dev-web MODEL=ggml-small-q5_1 # override model
+
+# TUI mode (default) 
+make dev
 ```
 
 ## CLI reference

@@ -1,4 +1,4 @@
-.PHONY: install build dev start
+.PHONY: install build dev dev-web start
 SHELL := /bin/bash
 .ONESHELL:
 
@@ -22,4 +22,5 @@ dev-web: install build
 
 start:
 	source ./scripts/setup-whisper.sh
+	go build -o ekko ./cmd/ekko
 	./ekko run
