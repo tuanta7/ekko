@@ -13,23 +13,29 @@ import (
 	"github.com/tuanta7/ekko/pkg/logger"
 	"github.com/tuanta7/ekko/pkg/silent"
 	"github.com/urfave/cli/v3"
+	"go.uber.org/zap"
 )
 
 func RunCommand(zl *logger.Logger, recorder *ffmpeg.Recorder) *cli.Command {
 	return &cli.Command{
 		Name:  "run",
-		Usage: "Run Ekko",
+		Usage: "Run Ekko (default: TUI mode)",
 		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:    "web",
+				Usage:   "Enable web/server mode",
+				Aliases: []string{"w"},
+			},
 			&cli.StringFlag{
-				Name:    "server",
+				Name:    "addr",
 				Value:   ":8080",
-				Usage:   "Run Ekko in server mode and listen on the specified address",
-				Aliases: []string{"s"},
+				Usage:   "Address to listen on when running in web mode (only used with --web)",
+				Aliases: []string{"a"},
 			},
 			&cli.StringFlag{
 				Name:    "model",
 				Value:   "ggml-base",
-				Usage:   "Specify the model to use",
+				Usage:   "Specify the Whisper GGML model name to use",
 				Aliases: []string{"m"},
 			},
 		},
@@ -37,22 +43,23 @@ func RunCommand(zl *logger.Logger, recorder *ffmpeg.Recorder) *cli.Command {
 			modelName := cmd.String("model")
 			scriber, err := whisper.NewClient(modelName)
 			if err != nil {
-				return fmt.Errorf("failed to create transcriber client: %v", err)
+				return fmt.Errorf("failed to create transcriber client: %w", err)
 			}
 			defer silent.Close(scriber)
 
 			h := handler.NewHandler(recorder, scriber, zl)
 			defer h.Close()
 
-			if addr := cmd.String("server"); addr != "" {
-				fmt.Println("Ekko is running in web mode")
+			if cmd.Bool("web") {
+				addr := cmd.String("addr")
+				zl.Info("starting web mode", zap.String("addr", addr))
 				server := browser.NewServer(h)
 				return server.Run(addr)
 			}
 
 			_, err = tea.NewProgram(console.NewModel(h)).Run()
 			if err != nil {
-				return fmt.Errorf("failed to run program %v", err)
+				return fmt.Errorf("failed to run TUI: %w", err)
 			}
 
 			return nil

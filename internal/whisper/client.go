@@ -18,7 +18,6 @@ func NewClient(modelName string) (*Client, error) {
 		return nil, err
 	}
 
-	fmt.Println("Whisper model loaded successfully!")
 	return &Client{
 		model: model,
 	}, nil

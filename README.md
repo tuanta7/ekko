@@ -5,14 +5,16 @@
 ![Status](https://img.shields.io/badge/status-development-orange)
 ![Language](https://img.shields.io/badge/lang-Go-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+[![CI](https://github.com/tuanta7/ekko/actions/workflows/ci.yml/badge.svg)](https://github.com/tuanta7/ekko/actions/workflows/ci.yml)
 
-A near real-time desktop audio transcription tool with a clean terminal and web UI. Capture system audio, transcribe on the fly using local Whisper models or Google Gemini API
+A near real-time desktop audio transcription tool with a clean terminal and web UI. Capture system audio, transcribe on the fly using local Whisper models or Google Gemini API.
 
 ## Key features
 
-- Local and cloud transcription backends: whisper (local) and gemini (Google API).
+- Local and cloud transcription backends: Whisper (local) and Gemini (Google API).
 - Privacy-first local mode when using Whisper models; no network round trips.
-- Clean UI for live transcription and simple controls.
+- Clean TUI for live transcription and simple controls.
+- Optional web UI served over HTTP.
 
 ![Demo](demo.gif)
 
@@ -20,31 +22,38 @@ A near real-time desktop audio transcription tool with a clean terminal and web 
 
 ![OS](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=Ubuntu&logoColor=white)
 
+Download a GGML Whisper model from [huggingface.co/ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp/tree/main) and place it in `ggml/`.
+See [`ggml/README.md`](ggml/README.md) for details.
+
 ```sh
-# Install make
-sudo apt update
-sudo apt install build-essential
+# example — download the smallest English model (~150 MB)
+wget -P ggml/ https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin
+```
 
-# Build the go binding library
-make build
+Then run the development server:
 
-# Run the app
+```sh
+# Web mode (serves on :8080)
+make dev-web                       # uses MODEL=ggml-base by default
+make dev-web MODEL=ggml-small-q5_1 # override model
+
+# TUI mode (default) 
 make dev
 ```
-### Prerequisites
 
-Run the script below to install required dependencies
+## CLI reference
 
-```bash
-# Install required dependencies
-make install
+```
+USAGE:
+   ekko run [OPTIONS]
 
-# or
-./install.sh
+OPTIONS:
+   --web, -w               Enable web/server mode (default: false)
+   --addr value, -a value  Address to listen on in web mode (default: ":8080")
+   --model value, -m value Whisper GGML model name to use (default: "ggml-base")
+   --help, -h              show help
 ```
 
-This will install:
+## License
 
-- `pulseaudio-utils` - For audio capture
-- `ffmpeg` - For audio processing
-
+MIT 

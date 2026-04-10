@@ -3,29 +3,55 @@ package console
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	accentCyan  = lipgloss.Color("#A7E9FF")
-	accentMint  = lipgloss.Color("#BFFFC5")
-	accentPink  = lipgloss.Color("#FFB7D5")
-	textPrimary = lipgloss.Color("#F7F7FF")
-	textMuted   = lipgloss.Color("#9AA2B2")
-	textError   = lipgloss.Color("#FF6B6B")
+	bgBase      = lipgloss.Color("#0F172A")
+	panelBorder = lipgloss.Color("#334155")
+	accentBlue  = lipgloss.Color("#7DD3FC")
+	accentMint  = lipgloss.Color("#86EFAC")
+	accentRose  = lipgloss.Color("#FCA5A5")
+	textPrimary = lipgloss.Color("#F8FAFC")
+	textMuted   = lipgloss.Color("#94A3B8")
 )
 
 var (
-	logoStyle       = lipgloss.NewStyle().Foreground(accentCyan).Bold(true)
-	selectedStyle   = lipgloss.NewStyle().Foreground(accentMint)
-	normalStyle     = lipgloss.NewStyle().Foreground(textMuted)
-	valueStyle      = lipgloss.NewStyle().Foreground(accentCyan)
-	statusStyle     = lipgloss.NewStyle().Foreground(accentPink)
-	helpStyle       = lipgloss.NewStyle().Foreground(textMuted)
-	errorStyle      = lipgloss.NewStyle().Foreground(textError)
-	transcriptStyle = lipgloss.NewStyle().Foreground(textPrimary)
+	appFrameStyle = lipgloss.NewStyle().
+			Background(bgBase).
+			Padding(1, 2)
+	headerStyle = lipgloss.NewStyle().
+			Foreground(accentBlue).
+			Bold(true)
+	subheaderStyle = lipgloss.NewStyle().
+			Foreground(textMuted)
+	panelStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(panelBorder).
+			Padding(0, 1)
+	menuItemStyle = lipgloss.NewStyle().
+			Foreground(textMuted)
+	selectedMenuItemStyle = lipgloss.NewStyle().
+				Foreground(textPrimary).
+				Background(lipgloss.Color("#1E293B")).
+				Bold(true).
+				Padding(0, 1)
+	valueStyle = lipgloss.NewStyle().
+			Foreground(accentBlue)
+	errorStyle = lipgloss.NewStyle().
+			Foreground(accentRose).
+			Bold(true)
+	statusReadyStyle = lipgloss.NewStyle().
+				Foreground(textMuted)
+	statusRecordingStyle = lipgloss.NewStyle().
+				Foreground(accentMint).
+				Bold(true)
+	transcriptPanelStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(panelBorder).
+				Padding(0, 1)
+	transcriptStyle = lipgloss.NewStyle().
+			Foreground(textPrimary)
+	kbdStyle = lipgloss.NewStyle().
+			Foreground(textPrimary).
+			Background(lipgloss.Color("#1E293B")).
+			Padding(0, 1)
+	helpStyle = lipgloss.NewStyle().
+			Foreground(textMuted)
 )
-
-const logo = `
-     _    _        
-  __| | _| | _____ 
- / _  |/ /| |/ / _ \
-|  __/|  <|   < (_) |
- \___||_\_\_|\_\___/
-`

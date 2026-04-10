@@ -1,17 +1,24 @@
-.PHONY: env deps whisper
+.PHONY: install build dev dev-web start
 SHELL := /bin/bash
 .ONESHELL:
+
+MODEL ?= ggml-base
 
 install:
 	./scripts/install.sh
 
-build: install
+build:
 	./scripts/build-whisper.sh
 
-dev:
+dev: install build
 	source ./scripts/setup-whisper.sh
 	go build -o ekko ./cmd/ekko
-	./ekko run --server :8080 --model ggml-medium-q5_0
+	./ekko run --model $(MODEL)
+
+dev-web: install build
+	source ./scripts/setup-whisper.sh
+	go build -o ekko ./cmd/ekko
+	./ekko run --web --addr :8080 --model $(MODEL)
 
 start:
 	source ./scripts/setup-whisper.sh

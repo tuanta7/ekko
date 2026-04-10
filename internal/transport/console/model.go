@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/tuanta7/ekko/internal/handler"
 )
 
@@ -19,6 +20,8 @@ type Model struct {
 	spinner     spinner.Model
 	transcript  viewport.Model
 	menuOptions []string
+	width       int
+	height      int
 
 	ctx            context.Context
 	cancel         context.CancelFunc
@@ -32,13 +35,14 @@ type Model struct {
 	chunkDuration       time.Duration
 	transcriptContent   string
 	isRecording         bool
+	lastError           string
 }
 
 func NewModel(handler *handler.Handler) *Model {
 	spinnerView := spinner.New()
 	spinnerView.Spinner = spinner.Dot
 
-	transcriptView := viewport.New(80, 5)
+	transcriptView := viewport.New(60, 10)
 	transcriptView.SetContent("")
 
 	return &Model{
@@ -80,8 +84,9 @@ func (m *Model) handleMenuSelection() (tea.Model, tea.Cmd) {
 func (m *Model) startSession() (tea.Model, tea.Cmd) {
 	m.screen = screenRecording
 	m.isRecording = true
+	m.lastError = ""
 	m.transcriptContent = ""
-	m.transcript.SetContent("Recording started...\n")
+	m.transcript.SetContent("Listening for speech...\n")
 
 	source := m.audioSources[m.selectedSourceIndex]
 	chunkDuration := m.chunkDuration
@@ -100,15 +105,15 @@ func (m *Model) startSession() (tea.Model, tea.Cmd) {
 
 	return m, tea.Batch(
 		m.spinner.Tick,
-		m.startRecording(source, chunkDuration),
-		m.startTranscribe(),
-		m.waitForTranscript(),
+		m.startRecording(ctx, source, chunkDuration),
+		m.startTranscribe(ctx),
+		m.waitForTranscript(ctx, m.transcriptChan),
 	)
 }
 
-func (m *Model) startRecording(source string, chunkDuration time.Duration) tea.Cmd {
+func (m *Model) startRecording(ctx context.Context, source string, chunkDuration time.Duration) tea.Cmd {
 	return func() tea.Msg {
-		err := m.handler.StartRecord(m.ctx, chunkDuration, source)
+		err := m.handler.StartRecord(ctx, chunkDuration, source)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			return recordingErrorMsg{err: err}
 		}
@@ -116,23 +121,26 @@ func (m *Model) startRecording(source string, chunkDuration time.Duration) tea.C
 	}
 }
 
-func (m *Model) startTranscribe() tea.Cmd {
+func (m *Model) startTranscribe(ctx context.Context) tea.Cmd {
 	return func() tea.Msg {
-		m.handler.StartTranscribe(m.ctx)
+		m.handler.StartTranscribe(ctx)
 		return nil
 	}
 }
 
-func (m *Model) waitForTranscript() tea.Cmd {
+func (m *Model) waitForTranscript(ctx context.Context, transcriptChan <-chan string) tea.Cmd {
 	return func() tea.Msg {
+		if ctx == nil {
+			return sessionEndMsg{err: context.Canceled}
+		}
 		select {
-		case text, ok := <-m.transcriptChan:
+		case text, ok := <-transcriptChan:
 			if !ok {
 				return sessionEndMsg{err: nil}
 			}
 			return transcriptUpdateMsg{text: text}
-		case <-m.ctx.Done():
-			return sessionEndMsg{err: m.ctx.Err()}
+		case <-ctx.Done():
+			return sessionEndMsg{err: ctx.Err()}
 		}
 	}
 }
@@ -146,9 +154,7 @@ func (m *Model) stopSession() (tea.Model, tea.Cmd) {
 
 	m.ctx = nil
 	m.isRecording = false
-
-	m.handler.Close()
-
+	m.transcriptChan = nil
 	m.screen = screenMenu
 	return m, nil
 }
@@ -159,15 +165,15 @@ func (m *Model) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "up":
+		case "up", "k", "ctrl+p":
 			if m.cursor > 0 {
 				m.cursor--
 			}
-		case "down":
+		case "down", "j", "ctrl+n":
 			if m.cursor < optionExit {
 				m.cursor++
 			}
-		case "left":
+		case "left", "h":
 			if m.cursor == optionAudioSource && len(m.audioSources) > 0 {
 				if m.selectedSourceIndex > 0 {
 					m.selectedSourceIndex--
@@ -177,7 +183,7 @@ func (m *Model) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.chunkDuration -= time.Second
 				}
 			}
-		case "right":
+		case "right", "l":
 			if m.cursor == optionAudioSource && len(m.audioSources) > 0 {
 				if m.selectedSourceIndex < len(m.audioSources)-1 {
 					m.selectedSourceIndex++
@@ -187,7 +193,7 @@ func (m *Model) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.chunkDuration += time.Second
 				}
 			}
-		case "enter":
+		case "enter", " ":
 			return m.handleMenuSelection()
 		}
 	case screenRecording:
@@ -195,7 +201,7 @@ func (m *Model) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			m.stopSession()
 			return m, tea.Quit
-		case "q", "s":
+		case "q", "s", "esc":
 			return m.stopSession()
 		default:
 			var cmd tea.Cmd
@@ -211,31 +217,51 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch mt := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyEvent(mt)
+	case tea.WindowSizeMsg:
+		m.width = mt.Width
+		m.height = mt.Height
+		m.resizeTranscript()
+		return m, nil
 	case sourcesLoadedMsg:
+		m.sourcesLoaded = true
 		if mt.err == nil {
-			m.sourcesLoaded = true
 			m.audioSources = mt.sources
 			m.selectedSourceIndex = 0
+			m.lastError = ""
+		} else {
+			m.lastError = fmt.Sprintf("Failed to load audio sources: %v", mt.err)
 		}
 		return m, nil
 	case spinner.TickMsg:
+		if !m.isRecording {
+			return m, nil
+		}
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(mt)
 		return m, cmd
 	case transcriptUpdateMsg:
 		if m.isRecording {
-			m.transcriptContent += mt.text
+			text := strings.TrimSpace(mt.text)
+			if text == "" {
+				return m, m.waitForTranscript(m.ctx, m.transcriptChan)
+			}
+			m.transcriptContent += fmt.Sprintf("[%s] %s\n", time.Now().Format("15:04:05"), text)
 			m.transcript.SetContent(m.transcriptContent)
 			m.transcript.GotoBottom()
-			return m, m.waitForTranscript()
+			return m, m.waitForTranscript(m.ctx, m.transcriptChan)
 		}
 		return m, nil
 	case recordingErrorMsg:
-		m.transcriptContent += fmt.Sprintf("\n[Error: %v]\n", mt.err)
-		m.transcript.SetContent(m.transcriptContent)
+		m.lastError = fmt.Sprintf("Recording failed: %v", mt.err)
 		return m.stopSession()
 	case sessionEndMsg:
+		if mt.err != nil && !errors.Is(mt.err, context.Canceled) {
+			m.lastError = fmt.Sprintf("Session ended with error: %v", mt.err)
+		}
 		m.isRecording = false
+		m.cancel = nil
+		m.ctx = nil
+		m.transcriptChan = nil
 		m.screen = screenMenu
 		return m, nil
 	default:
@@ -244,41 +270,128 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	var b strings.Builder
-
 	switch m.screen {
 	case screenMenu:
-		b.WriteString(logoStyle.Render(logo))
-		b.WriteString("\n")
+		return m.renderMenu()
+	case screenRecording:
+		return m.renderRecording()
+	}
 
-		for i, choice := range m.menuOptions {
-			label := choice
-			if choice == "Audio Source" {
-				if len(m.audioSources) > 0 {
-					sourceName := m.audioSources[m.selectedSourceIndex]
-					label = fmt.Sprintf("Audio Source: %s", valueStyle.Render(sourceName))
-				} else if m.sourcesLoaded {
-					label = fmt.Sprintf("Audio Source: %s", valueStyle.Render("No sources found"))
-				} else {
-					label = fmt.Sprintf("Audio Source: %s", valueStyle.Render("Loading..."))
-				}
-			} else if choice == "Chunk Duration" {
-				label = fmt.Sprintf("Chunk Duration: %s", valueStyle.Render(fmt.Sprintf("%ds", int(m.chunkDuration.Seconds()))))
-			}
+	return ""
+}
 
-			if m.cursor == i {
-				b.WriteString(selectedStyle.Render(fmt.Sprintf("> %s", label)) + "\n")
-			} else {
-				b.WriteString(normalStyle.Render(fmt.Sprintf("  %s", label)) + "\n")
+func (m *Model) renderMenu() string {
+	header := lipgloss.JoinVertical(
+		lipgloss.Left,
+		headerStyle.Render("Ekko Live"),
+		subheaderStyle.Render("Real-time transcription in your terminal"),
+		"",
+		statusReadyStyle.Render("Status: Ready"),
+	)
+
+	if m.lastError != "" {
+		header = lipgloss.JoinVertical(lipgloss.Left, header, errorStyle.Render(m.lastError))
+	}
+
+	var options []string
+	for i, choice := range m.menuOptions {
+		label := choice
+		switch choice {
+		case "Audio Source":
+			label = fmt.Sprintf("Audio Source: %s", valueStyle.Render(m.selectedSource()))
+		case "Chunk Duration":
+			label = fmt.Sprintf("Chunk Duration: %s", valueStyle.Render(fmt.Sprintf("%ds", int(m.chunkDuration.Seconds()))))
+		case "Start Session":
+			if len(m.audioSources) == 0 {
+				label = "Start Session (select audio source first)"
 			}
 		}
 
-		b.WriteString("\n" + helpStyle.Render("↑/↓ navigate  ←/→ adjust  enter select  q quit"))
-
-	case screenRecording:
-		b.WriteString(transcriptStyle.Render(m.transcript.View()))
-		b.WriteString("\n\n" + helpStyle.Render("↑/↓ scroll  s stop  q quit"))
+		if i == m.cursor {
+			options = append(options, selectedMenuItemStyle.Render("▸ "+label))
+			continue
+		}
+		options = append(options, menuItemStyle.Render("  "+label))
 	}
 
-	return b.String()
+	help := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		kbdStyle.Render("j/k or ↑/↓"), helpStyle.Render(" move   "),
+		kbdStyle.Render("h/l or ←/→"), helpStyle.Render(" adjust   "),
+		kbdStyle.Render("enter"), helpStyle.Render(" select   "),
+		kbdStyle.Render("q"), helpStyle.Render(" quit"),
+	)
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		"",
+		panelStyle.Render(strings.Join(options, "\n")),
+		"",
+		help,
+	)
+	return appFrameStyle.Render(content)
+}
+
+func (m *Model) renderRecording() string {
+	status := statusRecordingStyle.Render(m.spinner.View() + " Recording")
+	source := helpStyle.Render("Source: " + m.selectedSource())
+	duration := helpStyle.Render(fmt.Sprintf("Chunk: %ds", int(m.chunkDuration.Seconds())))
+
+	header := lipgloss.JoinHorizontal(lipgloss.Left, status, "   ", source, "   ", duration)
+	transcriptPanel := transcriptPanelStyle.Render(transcriptStyle.Render(m.transcript.View()))
+	help := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		kbdStyle.Render("↑/↓ or j/k"), helpStyle.Render(" scroll   "),
+		kbdStyle.Render("s"), helpStyle.Render(" stop   "),
+		kbdStyle.Render("q"), helpStyle.Render(" quit"),
+	)
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		"",
+		transcriptPanel,
+		"",
+		help,
+	)
+	return appFrameStyle.Render(content)
+}
+
+func (m *Model) selectedSource() string {
+	if len(m.audioSources) > 0 && m.selectedSourceIndex >= 0 && m.selectedSourceIndex < len(m.audioSources) {
+		return m.audioSources[m.selectedSourceIndex]
+	}
+	if !m.sourcesLoaded {
+		return "Loading..."
+	}
+	return "No sources found"
+}
+
+func (m *Model) resizeTranscript() {
+	if m.width <= 0 || m.height <= 0 {
+		return
+	}
+
+	usableWidth := m.width - appFrameStyle.GetHorizontalFrameSize()
+	if usableWidth < 42 {
+		usableWidth = 42
+	}
+
+	usableHeight := m.height - appFrameStyle.GetVerticalFrameSize() - 8
+	if usableHeight < 8 {
+		usableHeight = 8
+	}
+
+	innerWidth := usableWidth - transcriptPanelStyle.GetHorizontalFrameSize()
+	innerHeight := usableHeight - transcriptPanelStyle.GetVerticalFrameSize()
+	if innerWidth < 20 {
+		innerWidth = 20
+	}
+	if innerHeight < 5 {
+		innerHeight = 5
+	}
+
+	m.transcript.Width = innerWidth
+	m.transcript.Height = innerHeight
 }
