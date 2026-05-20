@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import {Events, WML} from "@wailsio/runtime";
-import {GreetService} from "../bindings/changeme";
+import {GreetService} from "../bindings/github.com/tuanta7/ekko/internal/service";
 
 function App() {
   const [name, setName] = useState<string>('');
