@@ -26,5 +26,8 @@ jobs:
       - name: Download Go modules
         run: go mod download
 
+      - name: Vet pure-Go packages
+        run: go vet ./internal/...
+
       - name: Run tests (pure-Go packages)
-        run: go test -race ./pkg/...
+        run: go test -race ./internal/...
