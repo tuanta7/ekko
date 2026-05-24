@@ -4,7 +4,7 @@ import {GreetService} from "../bindings/github.com/tuanta7/ekko/internal/service
 
 function App() {
   const [name, setName] = useState<string>('');
-  const [result, setResult] = useState<string>('Please enter your name below 👇');
+  const [result, setResult] = useState<string>('Please enter your name');
   const [time, setTime] = useState<string>('Listening for Time event...');
 
   const doGreet = () => {

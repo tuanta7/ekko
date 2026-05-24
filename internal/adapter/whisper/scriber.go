@@ -24,3 +24,7 @@ func NewScriber(modelName string) (*Scriber, error) {
 func (s *Scriber) Close() error {
 	return s.model.Close()
 }
+
+func (s *Scriber) DownloadModel(modelName string) error {
+	return nil
+}

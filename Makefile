@@ -1,4 +1,4 @@
-.PHONY: setup-wails-v3 setup-audio dev
+.PHONY: setup-wails-v3 setup-audio setup-whisper setup dev build
 SHELL := /bin/bash
 .ONESHELL:
 
@@ -18,6 +18,12 @@ setup-audio:
 setup-whisper:
 	./scripts/setup-whisper.sh
 
-dev: setup-audio
+setup: setup-wails-v3 setup-audio setup-whisper
+
+dev:
 	source ./scripts/setup-env.sh
 	wails3 dev
+
+build:
+	source ./scripts/setup-env.sh
+	wails3 build
