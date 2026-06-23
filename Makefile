@@ -1,8 +1,9 @@
-.PHONY: setup-wails-v3 setup-audio setup-whisper setup dev build
+.PHONY: setup-wails-v3 setup-audio setup-whisper download-model setup dev build
 SHELL := /bin/bash
 .ONESHELL:
 
 MODEL ?= ggml-base
+MODEL_DIR ?= ggml
 
 setup: setup-wails3 setup-audio setup-whisper
 
@@ -19,6 +20,9 @@ setup-audio:
 
 setup-whisper:
 	./scripts/setup-whisper.sh
+
+download-model:
+	./scripts/download-model.sh "$(MODEL)" "$(MODEL_DIR)"
 
 dev:
 	source ./scripts/setup-env.sh

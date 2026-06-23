@@ -31,40 +31,40 @@ type TranscribeService struct {
 	sessions map[string]*session.TranscribeSession
 }
 
-func (t *TranscribeService) ServiceStartup(ctx context.Context, _ application.ServiceOptions) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+func (ts *TranscribeService) ServiceStartup(ctx context.Context, _ application.ServiceOptions) {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 
-	t.app = application.Get()
-	t.ctx = ctx
-	t.recorder = ffmpeg.NewRecorder()
-	t.sessions = make(map[string]*session.TranscribeSession)
+	ts.app = application.Get()
+	ts.ctx = ctx
+	ts.recorder = ffmpeg.NewRecorder()
+	ts.sessions = make(map[string]*session.TranscribeSession)
 }
 
-func (t *TranscribeService) ServiceShutdown() error {
-	t.mu.Lock()
-	sessions := make([]*session.TranscribeSession, 0, len(t.sessions))
-	for _, sess := range t.sessions {
+func (ts *TranscribeService) ServiceShutdown() error {
+	ts.mu.Lock()
+	sessions := make([]*session.TranscribeSession, 0, len(ts.sessions))
+	for _, sess := range ts.sessions {
 		sessions = append(sessions, sess)
 	}
-	t.mu.Unlock()
+	ts.mu.Unlock()
 
 	for _, sess := range sessions {
 		sess.Shutdown()
 	}
 
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if t.scriber != nil {
-		err := t.scriber.Close()
-		t.scriber = nil
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	if ts.scriber != nil {
+		err := ts.scriber.Close()
+		ts.scriber = nil
 		return err
 	}
 	return nil
 }
 
-func (t *TranscribeService) Start(options StartOptions) (string, error) {
-	t.ensureRecorder()
+func (ts *TranscribeService) Start(options StartOptions) (string, error) {
+	ts.ensureRecorder()
 
 	options.ModelName = normalizeModelName(options.ModelName)
 	if options.Language == "" {
@@ -73,7 +73,7 @@ func (t *TranscribeService) Start(options StartOptions) (string, error) {
 
 	source := strings.TrimSpace(options.Source)
 	if source == "" {
-		sources, err := t.ListSources()
+		sources, err := ts.ListSources()
 		if err != nil {
 			return "", err
 		}
@@ -83,19 +83,19 @@ func (t *TranscribeService) Start(options StartOptions) (string, error) {
 		source = sources[0]
 	}
 
-	t.mu.Lock()
-	if len(t.sessions) > 0 {
-		t.mu.Unlock()
+	ts.mu.Lock()
+	if len(ts.sessions) > 0 {
+		ts.mu.Unlock()
 		return "", errors.New("a transcription session is already running")
 	}
-	t.mu.Unlock()
+	ts.mu.Unlock()
 
-	if err := t.ensureScriber(options.ModelName); err != nil {
+	if err := ts.ensureScriber(options.ModelName); err != nil {
 		return "", err
 	}
 
-	ctx, cancel := context.WithCancel(t.context())
-	frames, recorderErrs, err := t.recorder.Stream(ctx, ffmpeg.RecordOptions{
+	ctx, cancel := context.WithCancel(ts.context())
+	frames, recorderErrs, err := ts.recorder.Stream(ctx, ffmpeg.RecordOptions{
 		Source:        source,
 		FrameDuration: ffmpeg.DefaultFrameDuration,
 		BufferSeconds: ffmpeg.DefaultBufferSeconds,
@@ -108,20 +108,20 @@ func (t *TranscribeService) Start(options StartOptions) (string, error) {
 	s := session.NewSession(cancel)
 	id := s.ID
 
-	t.mu.Lock()
-	t.sessions[id] = s
-	t.mu.Unlock()
+	ts.mu.Lock()
+	ts.sessions[id] = s
+	ts.mu.Unlock()
 
-	t.emitState(id, "recording", "Recording started")
-	go t.runSession(ctx, s, frames, recorderErrs, options)
+	ts.emitState(id, "recording", "Recording started")
+	go ts.runSession(ctx, s, frames, recorderErrs, options)
 
 	return id, nil
 }
 
-func (t *TranscribeService) Stop(sessionID string) error {
-	t.mu.Lock()
-	s, ok := t.sessions[sessionID]
-	t.mu.Unlock()
+func (ts *TranscribeService) Stop(sessionID string) error {
+	ts.mu.Lock()
+	s, ok := ts.sessions[sessionID]
+	ts.mu.Unlock()
 	if !ok {
 		return errors.New("transcription session not found")
 	}
@@ -136,12 +136,12 @@ func (t *TranscribeService) Stop(sessionID string) error {
 	}
 }
 
-func (t *TranscribeService) runSession(ctx context.Context, sess *session.TranscribeSession, frames <-chan ffmpeg.Frame, recorderErrs <-chan error, options StartOptions) {
+func (ts *TranscribeService) runSession(ctx context.Context, sess *session.TranscribeSession, frames <-chan ffmpeg.Frame, recorderErrs <-chan error, options StartOptions) {
 	defer func() {
-		t.mu.Lock()
-		delete(t.sessions, sess.ID)
-		t.mu.Unlock()
-		t.emitState(sess.ID, "stopped", "Recording stopped")
+		ts.mu.Lock()
+		delete(ts.sessions, sess.ID)
+		ts.mu.Unlock()
+		ts.emitState(sess.ID, "stopped", "Recording stopped")
 		close(sess.Done)
 	}()
 
@@ -150,7 +150,7 @@ func (t *TranscribeService) runSession(ctx context.Context, sess *session.Transc
 	workers.Add(1)
 	go func() {
 		defer workers.Done()
-		t.runTranscriptionWorker(sess.ID, jobs, options)
+		ts.runTranscriptionWorker(sess.ID, jobs, options)
 	}()
 	defer func() {
 		close(jobs)
@@ -164,10 +164,10 @@ func (t *TranscribeService) runSession(ctx context.Context, sess *session.Transc
 		select {
 		case frame, ok := <-frames:
 			if !ok {
-				t.enqueueChunks(ctx, jobs, chunker.Flush(), &chunkID)
+				ts.enqueueChunks(ctx, jobs, chunker.Flush(), &chunkID)
 				return
 			}
-			t.enqueueChunks(ctx, jobs, chunker.AddFrame(frame), &chunkID)
+			ts.enqueueChunks(ctx, jobs, chunker.AddFrame(frame), &chunkID)
 
 		case err, ok := <-recorderErrs:
 			if !ok {
@@ -175,18 +175,18 @@ func (t *TranscribeService) runSession(ctx context.Context, sess *session.Transc
 				continue
 			}
 			if ok && err != nil {
-				t.emitError(sess.ID, err)
+				ts.emitError(sess.ID, err)
 				return
 			}
 
 		case <-ctx.Done():
-			t.enqueueChunks(context.Background(), jobs, chunker.Flush(), &chunkID)
+			ts.enqueueChunks(context.Background(), jobs, chunker.Flush(), &chunkID)
 			return
 		}
 	}
 }
 
-func (s *TranscribeService) enqueueChunks(ctx context.Context, jobs chan<- session.TranscribeJob, chunks []session.AudioChunk, chunkID *int64) {
+func (ts *TranscribeService) enqueueChunks(ctx context.Context, jobs chan<- session.TranscribeJob, chunks []session.AudioChunk, chunkID *int64) {
 	for _, chunk := range chunks {
 		*chunkID = *chunkID + 1
 		job := session.TranscribeJob{ID: *chunkID, Chunk: chunk}
@@ -206,23 +206,23 @@ func (s *TranscribeService) enqueueChunks(ctx context.Context, jobs chan<- sessi
 	}
 }
 
-func (s *TranscribeService) runTranscriptionWorker(sessionID string, jobs <-chan session.TranscribeJob, options StartOptions) {
+func (ts *TranscribeService) runTranscriptionWorker(sessionID string, jobs <-chan session.TranscribeJob, options StartOptions) {
 	for job := range jobs {
-		s.transcribeJob(sessionID, job, options)
+		ts.transcribeJob(sessionID, job, options)
 	}
 }
 
-func (s *TranscribeService) transcribeJob(sessionID string, job session.TranscribeJob, options StartOptions) {
-	s.emitState(sessionID, "transcribing", "")
+func (ts *TranscribeService) transcribeJob(sessionID string, job session.TranscribeJob, options StartOptions) {
+	ts.emitState(sessionID, "transcribing", "")
 
-	segments, err := s.scriber.Transcribe(job.Chunk.Samples, whisper.TranscribeOptions{
+	segments, err := ts.scriber.Transcribe(job.Chunk.Samples, whisper.TranscribeOptions{
 		Language:        options.Language,
 		Threads:         options.Threads,
 		Translate:       options.Translate,
 		TokenTimestamps: job.Chunk.Final,
 	})
 	if err != nil {
-		s.emitError(sessionID, err)
+		ts.emitError(sessionID, err)
 		return
 	}
 
@@ -231,7 +231,7 @@ func (s *TranscribeService) transcribeJob(sessionID string, job session.Transcri
 		return
 	}
 
-	s.emitTranscript(TranscriptEvent{
+	ts.emitTranscript(TranscriptEvent{
 		SessionID: sessionID,
 		ChunkID:   job.ID,
 		Text:      text,
@@ -240,39 +240,39 @@ func (s *TranscribeService) transcribeJob(sessionID string, job session.Transcri
 		EndMs:     job.Chunk.End.Milliseconds(),
 	})
 	if job.Chunk.Final {
-		s.emitState(sessionID, "recording", "")
+		ts.emitState(sessionID, "recording", "")
 	}
 }
 
-func (s *TranscribeService) ensureRecorder() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (ts *TranscribeService) ensureRecorder() {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 
-	if s.recorder != nil {
+	if ts.recorder != nil {
 		return
 	}
 
-	s.recorder = ffmpeg.NewRecorder()
-	if s.sessions == nil {
-		s.sessions = make(map[string]*session.TranscribeSession)
+	ts.recorder = ffmpeg.NewRecorder()
+	if ts.sessions == nil {
+		ts.sessions = make(map[string]*session.TranscribeSession)
 	}
 }
 
-func (s *TranscribeService) ensureScriber(modelName string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (ts *TranscribeService) ensureScriber(modelName string) error {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 
-	if s.scriber != nil && s.model == modelName {
+	if ts.scriber != nil && ts.model == modelName {
 		return nil
 	}
-	if len(s.sessions) > 0 {
+	if len(ts.sessions) > 0 {
 		return errors.New("cannot change model while a transcription session is running")
 	}
-	if s.scriber != nil {
-		if err := s.scriber.Close(); err != nil {
+	if ts.scriber != nil {
+		if err := ts.scriber.Close(); err != nil {
 			return err
 		}
-		s.scriber = nil
+		ts.scriber = nil
 	}
 
 	scriber, err := whisper.NewScriber(modelName)
@@ -280,44 +280,44 @@ func (s *TranscribeService) ensureScriber(modelName string) error {
 		return err
 	}
 
-	s.scriber = scriber
-	s.model = modelName
+	ts.scriber = scriber
+	ts.model = modelName
 	return nil
 }
 
-func (s *TranscribeService) context() context.Context {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (ts *TranscribeService) context() context.Context {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 
-	if s.ctx != nil {
-		return s.ctx
+	if ts.ctx != nil {
+		return ts.ctx
 	}
 	return context.Background()
 }
 
-func (s *TranscribeService) emitState(sessionID string, state string, message string) {
-	s.emit(event.StateEventName, event.StateEvent{
+func (ts *TranscribeService) emitState(sessionID string, state string, message string) {
+	ts.emit(event.StateEventName, event.StateEvent{
 		SessionID: sessionID,
 		State:     state,
 		Message:   message,
 	})
 }
 
-func (s *TranscribeService) emitTranscript(event TranscriptEvent) {
+func (ts *TranscribeService) emitTranscript(event TranscriptEvent) {
 	name := "transcribe:partial"
 	if event.Final {
 		name = "transcribe:final"
 	}
 
-	s.emit(name, event)
+	ts.emit(name, event)
 }
 
-func (s *TranscribeService) emitError(sessionID string, err error) {
+func (ts *TranscribeService) emitError(sessionID string, err error) {
 	if err == nil {
 		return
 	}
 
-	s.emit("transcribe:error", ErrorEvent{
+	ts.emit("transcribe:error", ErrorEvent{
 		SessionID: sessionID,
 		Message:   err.Error(),
 	})

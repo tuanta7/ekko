@@ -1,9 +1,9 @@
 package services
 
-func (t *TranscribeService) emit(name string, data any) {
-	t.mu.Lock()
-	app := t.app // Lock briefly to safely read the shared app
-	t.mu.Unlock()
+func (ts *TranscribeService) emit(name string, data any) {
+	ts.mu.Lock()
+	app := ts.app // Lock briefly to safely read the shared app
+	ts.mu.Unlock()
 
 	if app != nil {
 		app.Event.Emit(name, data)

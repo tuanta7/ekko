@@ -5,11 +5,11 @@ import (
 	"time"
 )
 
-func (t *TranscribeService) ListSources() ([]string, error) {
-	t.ensureRecorder()
+func (ts *TranscribeService) ListSources() ([]string, error) {
+	ts.ensureRecorder()
 
-	ctx, cancel := context.WithTimeout(t.context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(ts.context(), 3*time.Second)
 	defer cancel()
 
-	return t.recorder.ListSources(ctx)
+	return ts.recorder.ListSources(ctx)
 }
