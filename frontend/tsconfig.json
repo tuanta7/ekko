@@ -19,8 +19,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": false,
     "noImplicitAny": false,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
-  "include": [
-    "src", "bindings"],
+
+  "include": ["src", "bindings"]
 }

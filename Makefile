@@ -4,7 +4,9 @@ SHELL := /bin/bash
 
 MODEL ?= ggml-base
 
-setup-wails-v3:
+setup: setup-wails3 setup-audio setup-whisper
+
+setup-wails3:
 	sudo apt update
 	sudo apt install pkg-config gcc libgtk-4-dev libwebkitgtk-6.0-dev
 	go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
@@ -17,8 +19,6 @@ setup-audio:
 
 setup-whisper:
 	./scripts/setup-whisper.sh
-
-setup: setup-wails-v3 setup-audio setup-whisper
 
 dev:
 	source ./scripts/setup-env.sh

@@ -6,7 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/tuanta7/ekko/internal/service"
+	"github.com/tuanta7/ekko/services"
+	"github.com/tuanta7/ekko/services/event"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -23,9 +24,15 @@ func init() {
 	// This is not required, but the binding generator will pick up registered events
 	// and provide a strongly typed JS/TS API for them.
 	application.RegisterEvent[string]("time")
+
+	// Transcribe events
+	application.RegisterEvent[event.StateEvent]("transcribe:state")
+	application.RegisterEvent[services.TranscriptEvent]("transcribe:partial")
+	application.RegisterEvent[services.TranscriptEvent]("transcribe:final")
+	application.RegisterEvent[services.ErrorEvent]("transcribe:error")
 }
 
-// main function serves as the application's entry point. It initializes the application, creates a window,
+// The main function serves as the application's entry point. It initializes the application, creates a window,
 // and starts a goroutine that emits a time-based event every second. It subsequently runs the application and
 // logs any error that might occur.
 func main() {
@@ -39,7 +46,7 @@ func main() {
 		Name:        "ekko",
 		Description: "A demo of using raw HTML & CSS",
 		Services: []application.Service{
-			application.NewService(&service.GreetService{}),
+			application.NewService(&services.TranscribeService{}),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -55,14 +62,22 @@ func main() {
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title: "Window 1",
+		Title:            "Ekko",
+		Frameless:        true,
+		BackgroundType:   application.BackgroundTypeTransparent,
+		AlwaysOnTop:      true,
+		Width:            1000,
+		Height:           360,
+		BackgroundColour: application.NewRGBA(0, 0, 0, 0), // Fully transparent
+		Linux: application.LinuxWindow{
+			WindowIsTranslucent: true,
+		},
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
-		BackgroundColour: application.NewRGB(27, 38, 54),
-		URL:              "/",
+		URL: "/",
 	})
 
 	// Create a goroutine that emits an event containing the current time every second.
