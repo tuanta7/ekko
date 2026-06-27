@@ -1,7 +1,6 @@
 package whisper
 
 import (
-	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -10,17 +9,15 @@ import (
 	"github.com/ggerganov/whisper.cpp/bindings/go/pkg/whisper"
 )
 
+const modelPath = "ggml/ggml-tiny.en-q5_1.bin"
+
 type Scriber struct {
 	model whisper.Model
 	mu    sync.Mutex
 }
 
 type TranscribeOptions struct {
-	Language        string
-	Threads         uint
-	Translate       bool
 	TokenTimestamps bool
-	InitialPrompt   string
 }
 
 type Segment struct {
@@ -29,8 +26,8 @@ type Segment struct {
 	Text  string        `json:"text"`
 }
 
-func NewScriber(modelName string) (*Scriber, error) {
-	model, err := whisper.New(fmt.Sprintf("ggml/%s.bin", modelName))
+func NewScriber() (*Scriber, error) {
+	model, err := whisper.New(modelPath)
 	if err != nil {
 		return nil, err
 	}
@@ -42,10 +39,6 @@ func NewScriber(modelName string) (*Scriber, error) {
 
 func (s *Scriber) Close() error {
 	return s.model.Close()
-}
-
-func (s *Scriber) DownloadModel(modelName string) error {
-	return nil
 }
 
 func (s *Scriber) Transcribe(samples []float32, options TranscribeOptions) ([]Segment, error) {
@@ -61,21 +54,7 @@ func (s *Scriber) Transcribe(samples []float32, options TranscribeOptions) ([]Se
 		return nil, err
 	}
 
-	if options.Language != "" && options.Language != "auto" {
-		if err := ctx.SetLanguage(options.Language); err != nil {
-			return nil, err
-		}
-	}
-
-	if options.Threads > 0 {
-		ctx.SetThreads(options.Threads)
-	}
-
-	ctx.SetTranslate(options.Translate)
 	ctx.SetTokenTimestamps(options.TokenTimestamps)
-	if options.InitialPrompt != "" {
-		ctx.SetInitialPrompt(options.InitialPrompt)
-	}
 
 	if err := ctx.Process(samples, nil, nil, nil); err != nil {
 		return nil, err
@@ -104,4 +83,15 @@ func (s *Scriber) Transcribe(samples []float32, options TranscribeOptions) ([]Se
 	}
 
 	return segments, nil
+}
+
+func CombineSegments(segments []Segment) string {
+	var parts []string
+	for _, segment := range segments {
+		text := strings.TrimSpace(segment.Text)
+		if text != "" {
+			parts = append(parts, text)
+		}
+	}
+	return strings.Join(parts, " ")
 }

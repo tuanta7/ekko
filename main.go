@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/tuanta7/ekko/services"
-	"github.com/tuanta7/ekko/services/event"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -26,7 +25,7 @@ func init() {
 	application.RegisterEvent[string]("time")
 
 	// Transcribe events
-	application.RegisterEvent[event.StateEvent]("transcribe:state")
+	application.RegisterEvent[services.StateEvent]("transcribe:state")
 	application.RegisterEvent[services.TranscriptEvent]("transcribe:partial")
 	application.RegisterEvent[services.TranscriptEvent]("transcribe:final")
 	application.RegisterEvent[services.ErrorEvent]("transcribe:error")
@@ -64,11 +63,11 @@ func main() {
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Ekko",
 		Frameless:        true,
-		BackgroundType:   application.BackgroundTypeTransparent,
 		AlwaysOnTop:      true,
-		Width:            1000,
-		Height:           360,
-		BackgroundColour: application.NewRGBA(0, 0, 0, 0), // Fully transparent
+		Width:            540,
+		Height:           240,
+		BackgroundType:   application.BackgroundTypeTransparent,
+		BackgroundColour: application.NewRGBA(0, 0, 0, 0),
 		Linux: application.LinuxWindow{
 			WindowIsTranslucent: true,
 		},

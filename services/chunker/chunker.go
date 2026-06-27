@@ -1,41 +1,8 @@
-package session
+package chunker
 
 import (
-	"math"
 	"time"
-
-	"github.com/tuanta7/ekko/services/adapter/ffmpeg"
 )
-
-const (
-	defaultEnergyThreshold = 0.01
-)
-
-type ChunkerConfig struct {
-	sampleRate       int
-	frameDuration    time.Duration
-	minSpeech        time.Duration
-	silenceToFinal   time.Duration
-	speechPad        time.Duration
-	overlap          time.Duration
-	partialWindow    time.Duration
-	partialInterval  time.Duration
-	maxFinalDuration time.Duration
-	energyThreshold  float64
-}
-
-var DefaultChunkerConfig = ChunkerConfig{
-	sampleRate:       ffmpeg.DefaultSampleRate,
-	frameDuration:    ffmpeg.DefaultFrameDuration,
-	minSpeech:        250 * time.Millisecond,
-	silenceToFinal:   700 * time.Millisecond,
-	speechPad:        300 * time.Millisecond,
-	overlap:          500 * time.Millisecond,
-	partialWindow:    5 * time.Second,
-	partialInterval:  2 * time.Second,
-	maxFinalDuration: 8 * time.Second,
-	energyThreshold:  defaultEnergyThreshold,
-}
 
 type AudioChunk struct {
 	Samples []float32
@@ -45,7 +12,7 @@ type AudioChunk struct {
 }
 
 type AudioChunker struct {
-	Config ChunkerConfig
+	Config Config
 
 	sampleCursor int64
 
@@ -61,7 +28,7 @@ type AudioChunker struct {
 
 func NewAudioChunker() *AudioChunker {
 	return &AudioChunker{
-		Config: DefaultChunkerConfig,
+		Config: DefaultConfig,
 	}
 }
 
@@ -157,9 +124,11 @@ func (c *AudioChunker) shouldEmitPartial() bool {
 	if len(c.speechSamples) == 0 {
 		return false
 	}
+
 	if durationForSamples(c.activeSpeechSamples, c.Config.sampleRate) < c.Config.minSpeech {
 		return false
 	}
+
 	return durationForSamples(len(c.speechSamples)-c.lastPartialAt, c.Config.sampleRate) >= c.Config.partialInterval
 }
 
@@ -211,7 +180,6 @@ func (c *AudioChunker) resetAfterFinal(preRoll []float32) {
 	c.activeSpeechSamples = 0
 	c.lastPartialAt = 0
 	c.preRollSamples = append([]float32(nil), preRoll...)
-	c.capPreRoll()
 }
 
 func (c *AudioChunker) appendPreRoll(samples []float32) {
@@ -224,20 +192,6 @@ func (c *AudioChunker) capPreRoll() {
 	if len(c.preRollSamples) > maxSamples {
 		c.preRollSamples = append([]float32(nil), c.preRollSamples[len(c.preRollSamples)-maxSamples:]...)
 	}
-}
-
-func isSpeech(samples []float32, threshold float64) bool {
-	if len(samples) == 0 {
-		return false
-	}
-
-	var sum float64
-	for _, sample := range samples {
-		sum += float64(sample * sample)
-	}
-
-	rms := math.Sqrt(sum / float64(len(samples)))
-	return rms >= threshold
 }
 
 func samplesForDuration(duration time.Duration, sampleRate int) int {

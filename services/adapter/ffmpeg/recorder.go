@@ -53,21 +53,14 @@ type RecordOptions struct {
 	BufferSeconds int
 }
 
-func (r *Recorder) Stream(ctx context.Context, options RecordOptions) (<-chan Frame, <-chan error, error) {
-	source := strings.TrimSpace(options.Source)
+func (r *Recorder) Stream(ctx context.Context, source string) (<-chan Frame, <-chan error, error) {
+	source = strings.TrimSpace(source)
 	if source == "" {
 		return nil, nil, errors.New("audio source is required")
 	}
 
-	frameDuration := options.FrameDuration
-	if frameDuration <= 0 {
-		frameDuration = DefaultFrameDuration
-	}
-
-	bufferSeconds := options.BufferSeconds
-	if bufferSeconds <= 0 {
-		bufferSeconds = DefaultBufferSeconds
-	}
+	frameDuration := DefaultFrameDuration
+	bufferSeconds := DefaultBufferSeconds
 
 	frameSamples := int(frameDuration.Seconds() * float64(DefaultSampleRate))
 	if frameSamples <= 0 {
