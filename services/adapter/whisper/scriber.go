@@ -12,18 +12,8 @@ import (
 const modelPath = "ggml/ggml-tiny.en-q5_1.bin"
 
 type Scriber struct {
-	model whisper.Model
 	mu    sync.Mutex
-}
-
-type TranscribeOptions struct {
-	TokenTimestamps bool
-}
-
-type Segment struct {
-	Start time.Duration `json:"start"`
-	End   time.Duration `json:"end"`
-	Text  string        `json:"text"`
+	model whisper.Model
 }
 
 func NewScriber() (*Scriber, error) {
@@ -39,6 +29,16 @@ func NewScriber() (*Scriber, error) {
 
 func (s *Scriber) Close() error {
 	return s.model.Close()
+}
+
+type TranscribeOptions struct {
+	TokenTimestamps bool
+}
+
+type Segment struct {
+	Start time.Duration `json:"start"`
+	End   time.Duration `json:"end"`
+	Text  string        `json:"text"`
 }
 
 func (s *Scriber) Transcribe(samples []float32, options TranscribeOptions) ([]Segment, error) {

@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { AlertCircle, CheckCircle2, GripVertical, Mic, Play, RefreshCw, Square, Trash2 } from "lucide-react";
 
 import type { RecorderPhase, RecorderState } from "../types/transcription";
-import {labelState} from "@/src/lib/state.ts";
+import {labelState} from "../lib/state.ts";
 
 type AppHeaderProps = {
   recorder: RecorderState;
@@ -37,7 +37,7 @@ function AppHeader({
   return (
     <header className="relative z-10 flex h-12 shrink-0 items-center gap-2 px-2">
       <div
-        className="flex h-8 w-5 cursor-grab items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-300 hover:text-zinc-800 active:cursor-grabbing"
+        className="flex h-8 w-5 cursor-grab items-center justify-center rounded-xl text-zinc-500 transition hover:bg-zinc-300 hover:text-zinc-800 active:cursor-grabbing"
         style={{ "--wails-draggable": "drag" } as CSSProperties}
         title="Drag to move"
       >
@@ -70,7 +70,7 @@ function AppHeader({
           type="button"
           onClick={onClear}
           disabled={!hasTranscript}
-          className="mono-button grid h-8 w-8 place-items-center rounded-lg disabled:cursor-not-allowed disabled:opacity-30"
+          className="cursor-pointer mono-button grid h-8 w-8 place-items-center rounded-xl disabled:cursor-not-allowed disabled:opacity-30"
           title="Clear transcript"
           aria-label="Clear transcript"
         >
@@ -81,7 +81,7 @@ function AppHeader({
           type="button"
           onClick={onRefresh}
           disabled={isActive}
-          className="mono-button grid h-8 w-8 place-items-center rounded-lg disabled:cursor-not-allowed disabled:opacity-40"
+          className="cursor-pointer mono-button grid h-8 w-8 place-items-center rounded-xl disabled:cursor-not-allowed disabled:opacity-40"
           title="Refresh audio sources"
           aria-label="Refresh audio sources"
         >
@@ -95,7 +95,7 @@ function AppHeader({
             value={source}
             onChange={(event) => onSourceChange(event.target.value)}
             disabled={isActive}
-            className="mono-select h-8 w-40 appearance-none rounded-lg pl-8 pr-3 font-medium outline-none disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-zinc-100"
+            className="cursor-pointer mono-select h-8 w-40 appearance-none rounded-xl pl-8 pr-3 font-medium outline-none disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-zinc-100"
           >
             {sources.length === 0 && <option value="">No source found</option>}
             {sources.map((value) => (
@@ -111,7 +111,7 @@ function AppHeader({
             type="button"
             onClick={onStop}
             disabled={!canStop}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`flex cursor-pointer h-8 w-8 items-center justify-center rounded-xl disabled:cursor-not-allowed disabled:opacity-50 ${
               isStarting || isStopping ? "mono-button" : "mono-button-primary active:scale-95"
             }`}
             title={isStarting ? "Starting recording" : isStopping ? "Stopping recording" : "Stop recording"}
@@ -128,7 +128,7 @@ function AppHeader({
             type="button"
             onClick={onStart}
             disabled={!source}
-            className="mono-button-primary flex h-8 w-8 items-center justify-center rounded-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-35"
+            className="cursor-pointer mono-button-primary flex h-8 w-8 items-center justify-center rounded-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-35"
             title="Start recording"
             aria-label="Start recording"
           >

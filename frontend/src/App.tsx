@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Events } from "@wailsio/runtime";
-import { StartOptions, TranscribeService } from "../bindings/github.com/tuanta7/ekko/services";
+import { TranscribeService } from "../bindings/github.com/tuanta7/ekko/services";
 import type { ErrorEvent, StateEvent, TranscriptEvent } from "@/bindings/github.com/tuanta7/ekko/services";
 import AppHeader from "./components/AppHeader";
 import TranscriptMain from "./components/TranscriptMain";
@@ -88,7 +88,7 @@ function App() {
     setFinalLines([]);
     dispatch({ type: "start-requested" });
 
-    TranscribeService.Start(new StartOptions({ source }))
+    TranscribeService.Start(source)
       .then((sessionID: string) => {
         dispatch({ type: "start-resolved", sessionID });
       })

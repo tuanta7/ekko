@@ -10,7 +10,12 @@ import (
 
 type Frame []float32
 
-func readFrames(ctx context.Context, reader io.Reader, frames chan<- Frame, frameSamples int) error {
+func readFrames(
+	ctx context.Context,
+	reader io.Reader,
+	frames chan<- Frame,
+	frameSamples int,
+) error {
 	buf := make([]byte, frameSamples*4)
 	samples := make([]float32, frameSamples)
 	var index int64

@@ -16,6 +16,7 @@ body,
 
 .mono-shell {
   background: rgb(244 244 245);
+  border-radius: 20px;
   box-shadow: 0 12px 36px rgb(24 24 27 / 14%);
 }
 

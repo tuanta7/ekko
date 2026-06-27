@@ -26,6 +26,7 @@ func TestAudioChunkerFinalizesUtteranceAfterSilence(t *testing.T) {
 	}
 }
 
+// TestAudioChunkerDiscardsShortNoise verifies that audio below the minimum speech duration is ignored.
 func TestAudioChunkerDiscardsShortNoise(t *testing.T) {
 	audioChunker := NewAudioChunker()
 
@@ -37,6 +38,7 @@ func TestAudioChunkerDiscardsShortNoise(t *testing.T) {
 	}
 }
 
+// TestAudioChunkerEmitsPartialAndFinal verifies progressive and completed chunk emission.
 func TestAudioChunkerEmitsPartialAndFinal(t *testing.T) {
 	audioChunker := NewAudioChunker()
 
@@ -57,6 +59,7 @@ func TestAudioChunkerEmitsPartialAndFinal(t *testing.T) {
 	}
 }
 
+// TestAudioChunkerPreservesConfiguredOverlapAfterMaximumDuration verifies forced split continuity.
 func TestAudioChunkerPreservesConfiguredOverlapAfterMaximumDuration(t *testing.T) {
 	audioChunker := NewAudioChunker()
 	audioChunker.Config.partialInterval = time.Hour
@@ -79,6 +82,7 @@ func TestAudioChunkerPreservesConfiguredOverlapAfterMaximumDuration(t *testing.T
 	}
 }
 
+// addTestFrames sends repeated fixed-amplitude frames to a chunker and collects its output.
 func addTestFrames(audioChunker *AudioChunker, count int, amplitude float32) []AudioChunk {
 	frameSamples := samplesForDuration(audioChunker.Config.frameDuration, audioChunker.Config.sampleRate)
 	frame := make([]float32, frameSamples)

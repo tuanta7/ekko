@@ -4,26 +4,39 @@ import (
 	"time"
 )
 
+// AudioChunk contains a timestamped section of audio ready for transcription.
 type AudioChunk struct {
+	// Samples contain normalized PCM audio samples.
 	Samples []float32
-	Start   time.Duration
-	End     time.Duration
-	Final   bool
+	// Start is the chunk's offset from the beginning of the audio stream.
+	Start time.Duration
+	// End is the chunk's end offset from the beginning of the audio stream.
+	End time.Duration
+	// Final reports whether the chunk completes an utterance.
+	Final bool
 }
 
+// AudioChunker groups incoming audio frames into partial and final speech chunks.
 type AudioChunker struct {
+	// Config defines the speech detection and chunk emission behavior.
 	Config Config
 
+	// sampleCursor is the total number of input samples processed so far.
 	sampleCursor int64
-
-	inSpeech       bool
-	speechStart    int64
-	speechSamples  []float32
+	// inSpeech reports whether the chunker is currently collecting an utterance.
+	inSpeech bool
+	// speechStart is the absolute sample offset where the current buffer begins.
+	speechStart int64
+	// speechSamples contains the current utterance, including retained padding.
+	speechSamples []float32
+	// preRollSamples contains recent idle audio to prepend when speech begins.
 	preRollSamples []float32
-
-	silenceSamples      int
+	// silenceSamples is the current run of non-speech samples in the utterance.
+	silenceSamples int
+	// activeSpeechSamples is the total number of samples classified as speech.
 	activeSpeechSamples int
-	lastPartialAt       int
+	// lastPartialAt is the buffer length when the previous partial chunk was emitted.
+	lastPartialAt int
 }
 
 func NewAudioChunker() *AudioChunker {
@@ -32,6 +45,7 @@ func NewAudioChunker() *AudioChunker {
 	}
 }
 
+// AddFrame classifies and stores one audio frame, returning any chunks it completes.
 func (c *AudioChunker) AddFrame(samples []float32) []AudioChunk {
 	if len(samples) == 0 {
 		return nil
@@ -47,6 +61,7 @@ func (c *AudioChunker) AddFrame(samples []float32) []AudioChunk {
 	return c.addSilenceFrame(samples)
 }
 
+// Flush finalizes and returns any pending utterance that contains enough speech.
 func (c *AudioChunker) Flush() []AudioChunk {
 	if !c.inSpeech {
 		return nil
@@ -60,6 +75,7 @@ func (c *AudioChunker) Flush() []AudioChunk {
 	return []AudioChunk{chunk}
 }
 
+// addSpeechFrame adds a detected speech frame and emits chunks when their limits are reached.
 func (c *AudioChunker) addSpeechFrame(samples []float32, frameStart int64) []AudioChunk {
 	if !c.inSpeech {
 		c.inSpeech = true
@@ -80,7 +96,7 @@ func (c *AudioChunker) addSpeechFrame(samples []float32, frameStart int64) []Aud
 		c.lastPartialAt = len(c.speechSamples)
 	}
 
-	if durationForSamples(len(c.speechSamples), c.Config.sampleRate) >= c.Config.maxFinalDuration {
+	if samplesDuration(len(c.speechSamples), c.Config.sampleRate) >= c.Config.maxFinalDuration {
 		chunk, ok := c.finalChunk(0)
 		tail := tailSamples(chunk.Samples, samplesForDuration(c.Config.overlap, c.Config.sampleRate))
 		c.resetAfterFinal(tail)
@@ -92,6 +108,7 @@ func (c *AudioChunker) addSpeechFrame(samples []float32, frameStart int64) []Aud
 	return chunks
 }
 
+// addSilenceFrame retains padding and finalizes an utterance after sustained silence.
 func (c *AudioChunker) addSilenceFrame(samples []float32) []AudioChunk {
 	if !c.inSpeech {
 		c.appendPreRoll(samples)
@@ -101,7 +118,7 @@ func (c *AudioChunker) addSilenceFrame(samples []float32) []AudioChunk {
 	c.speechSamples = append(c.speechSamples, samples...)
 	c.silenceSamples += len(samples)
 
-	if durationForSamples(c.silenceSamples, c.Config.sampleRate) < c.Config.silenceToFinal {
+	if samplesDuration(c.silenceSamples, c.Config.sampleRate) < c.Config.silenceToFinal {
 		return nil
 	}
 
@@ -120,18 +137,20 @@ func (c *AudioChunker) addSilenceFrame(samples []float32) []AudioChunk {
 	return []AudioChunk{chunk}
 }
 
+// shouldEmitPartial reports whether enough speech and new audio exist for a partial chunk.
 func (c *AudioChunker) shouldEmitPartial() bool {
 	if len(c.speechSamples) == 0 {
 		return false
 	}
 
-	if durationForSamples(c.activeSpeechSamples, c.Config.sampleRate) < c.Config.minSpeech {
+	if samplesDuration(c.activeSpeechSamples, c.Config.sampleRate) < c.Config.minSpeech {
 		return false
 	}
 
-	return durationForSamples(len(c.speechSamples)-c.lastPartialAt, c.Config.sampleRate) >= c.Config.partialInterval
+	return samplesDuration(len(c.speechSamples)-c.lastPartialAt, c.Config.sampleRate) >= c.Config.partialInterval
 }
 
+// partialChunk copies the most recent configured window into a non-final chunk.
 func (c *AudioChunker) partialChunk() AudioChunk {
 	windowSamples := samplesForDuration(c.Config.partialWindow, c.Config.sampleRate)
 	startOffset := 0
@@ -145,19 +164,20 @@ func (c *AudioChunker) partialChunk() AudioChunk {
 
 	return AudioChunk{
 		Samples: samples,
-		Start:   durationForSamples64(startSample, c.Config.sampleRate),
-		End:     durationForSamples64(endSample, c.Config.sampleRate),
+		Start:   samplesDuration(startSample, c.Config.sampleRate),
+		End:     samplesDuration(endSample, c.Config.sampleRate),
 		Final:   false,
 	}
 }
 
+// finalChunk builds a final chunk after removing the requested number of trailing samples.
 func (c *AudioChunker) finalChunk(dropTailSamples int) (AudioChunk, bool) {
 	end := len(c.speechSamples) - dropTailSamples
 	if end < 0 {
 		end = 0
 	}
 
-	if durationForSamples(c.activeSpeechSamples, c.Config.sampleRate) < c.Config.minSpeech {
+	if samplesDuration(c.activeSpeechSamples, c.Config.sampleRate) < c.Config.minSpeech {
 		return AudioChunk{}, false
 	}
 
@@ -166,12 +186,13 @@ func (c *AudioChunker) finalChunk(dropTailSamples int) (AudioChunk, bool) {
 
 	return AudioChunk{
 		Samples: samples,
-		Start:   durationForSamples64(c.speechStart, c.Config.sampleRate),
-		End:     durationForSamples64(endSample, c.Config.sampleRate),
+		Start:   samplesDuration(c.speechStart, c.Config.sampleRate),
+		End:     samplesDuration(endSample, c.Config.sampleRate),
 		Final:   true,
 	}, true
 }
 
+// resetAfterFinal clears the utterance state and preserves the supplied audio as pre-roll.
 func (c *AudioChunker) resetAfterFinal(preRoll []float32) {
 	c.inSpeech = false
 	c.speechStart = 0
@@ -182,11 +203,13 @@ func (c *AudioChunker) resetAfterFinal(preRoll []float32) {
 	c.preRollSamples = append([]float32(nil), preRoll...)
 }
 
+// appendPreRoll adds idle audio to the rolling pre-speech buffer.
 func (c *AudioChunker) appendPreRoll(samples []float32) {
 	c.preRollSamples = append(c.preRollSamples, samples...)
 	c.capPreRoll()
 }
 
+// capPreRoll limits pre-roll audio to the configured speech padding duration.
 func (c *AudioChunker) capPreRoll() {
 	maxSamples := samplesForDuration(c.Config.speechPad, c.Config.sampleRate)
 	if len(c.preRollSamples) > maxSamples {
@@ -194,18 +217,12 @@ func (c *AudioChunker) capPreRoll() {
 	}
 }
 
+// samplesForDuration converts a duration to a sample count at the given sample rate.
 func samplesForDuration(duration time.Duration, sampleRate int) int {
 	return int(duration.Seconds() * float64(sampleRate))
 }
 
-func durationForSamples(samples int, sampleRate int) time.Duration {
-	return durationForSamples64(int64(samples), sampleRate)
-}
-
-func durationForSamples64(samples int64, sampleRate int) time.Duration {
-	return time.Duration(float64(samples) / float64(sampleRate) * float64(time.Second))
-}
-
+// tailSamples returns a copy of at most count samples from the end of an audio buffer.
 func tailSamples(samples []float32, count int) []float32 {
 	if count <= 0 || len(samples) == 0 {
 		return nil

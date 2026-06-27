@@ -62,6 +62,8 @@ func (r *Recorder) Stream(ctx context.Context, source string) (<-chan Frame, <-c
 	frameDuration := DefaultFrameDuration
 	bufferSeconds := DefaultBufferSeconds
 
+	//  number of audio samples in one frame
+	//  0.1 seconds × 16,000 samples/second = 1,600 samples
 	frameSamples := int(frameDuration.Seconds() * float64(DefaultSampleRate))
 	if frameSamples <= 0 {
 		return nil, nil, fmt.Errorf("invalid frame duration %s", frameDuration)
@@ -72,16 +74,18 @@ func (r *Recorder) Stream(ctx context.Context, source string) (<-chan Frame, <-c
 		bufferFrames = 1
 	}
 
+	// FFmpeg emits a continuous PCM stream; readFrames applies the frame
+	// boundaries using frameSamples rather than relying on FFmpeg packets.
 	cmd := exec.CommandContext(ctx,
 		"ffmpeg",
 		"-hide_banner",
 		"-loglevel", "error",
 		"-f", "pulse",
 		"-i", source,
-		"-ac", "1",
+		"-ac", "1", // Downmix the input to mono.
 		"-ar", fmt.Sprintf("%d", DefaultSampleRate),
-		"-f", "f32le",
-		"pipe:1",
+		"-f", "f32le", // Emit headerless, little-endian float32 PCM.
+		"pipe:1", // Stream PCM through stdout.
 	)
 
 	stdout, err := cmd.StdoutPipe()
@@ -119,8 +123,7 @@ func (r *Recorder) Stream(ctx context.Context, source string) (<-chan Frame, <-c
 		}
 
 		if waitErr != nil {
-			message := strings.TrimSpace(stderr.String())
-			if message != "" {
+			if message := strings.TrimSpace(stderr.String()); message != "" {
 				errs <- fmt.Errorf("ffmpeg failed: %w: %s", waitErr, message)
 				return
 			}

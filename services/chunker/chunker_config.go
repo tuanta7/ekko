@@ -6,21 +6,33 @@ import (
 	"github.com/tuanta7/ekko/services/adapter/ffmpeg"
 )
 
+// Config controls speech detection and the timing of emitted audio chunks.
 type Config struct {
-	sampleRate       int
-	frameDuration    time.Duration
-	minSpeech        time.Duration
-	silenceToFinal   time.Duration
-	speechPad        time.Duration
-	overlap          time.Duration
-	partialWindow    time.Duration
-	partialInterval  time.Duration
+	// sampleRate is the number of audio samples processed per second.
+	sampleRate int
+	// frameDuration is the expected duration of each input audio frame.
+	frameDuration time.Duration
+	// minSpeech is the minimum detected speech required to emit a chunk.
+	minSpeech time.Duration
+	// silenceToFinal is the consecutive silence required to finish an utterance.
+	silenceToFinal time.Duration
+	// speechPad is the silence retained before and after detected speech.
+	speechPad time.Duration
+	// overlap is the audio retained when an utterance is split at its maximum duration.
+	overlap time.Duration
+	// partialWindow is the maximum amount of recent audio included in a partial chunk.
+	partialWindow time.Duration
+	// partialInterval is the amount of new audio required between partial chunks.
+	partialInterval time.Duration
+	// maxFinalDuration is the maximum utterance length before a forced final chunk.
 	maxFinalDuration time.Duration
-	energyThreshold  float64
+	// energyThreshold is the minimum RMS amplitude used to classify a frame as speech.
+	energyThreshold float64
 }
 
+// DefaultConfig contains the standard chunking settings used by NewAudioChunker.
 var DefaultConfig = Config{
-	sampleRate:       ffmpeg.DefaultSampleRate,
+	sampleRate:       ffmpeg.DefaultSampleRate, // samples per second
 	frameDuration:    ffmpeg.DefaultFrameDuration,
 	minSpeech:        250 * time.Millisecond,
 	silenceToFinal:   700 * time.Millisecond,

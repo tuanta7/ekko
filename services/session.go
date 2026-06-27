@@ -10,10 +10,9 @@ import (
 	"github.com/tuanta7/ekko/services/chunker"
 )
 
-type Job struct {
-	ID    int64
-	Chunk chunker.AudioChunk
-}
+const (
+	DefaultJobBufferSize = 4
+)
 
 type TranscribeSession struct {
 	ID     string
@@ -31,37 +30,36 @@ func NewSession(cancel context.CancelFunc) *TranscribeSession {
 
 func (t *TranscribeSession) Shutdown() {
 	t.Cancel()
-	<-t.Done
+	<-t.Done // Wait for the session to finish
 }
 
-type StartOptions struct {
-	Source string `json:"source"`
-}
-
-func (ts *TranscribeService) runSession(
+func (t *TranscribeService) runSession(
 	ctx context.Context,
-	sess *TranscribeSession,
+	session *TranscribeSession,
 	frames <-chan ffmpeg.Frame,
 	recorderErrs <-chan error,
 ) {
 	defer func() {
-		ts.mu.Lock()
-		delete(ts.sessions, sess.ID)
-		ts.mu.Unlock()
-		ts.emitState(sess.ID, "stopped", "Recording stopped")
-		close(sess.Done)
+		t.mu.Lock()
+		delete(t.sessions, session.ID)
+		t.mu.Unlock()
+		// Notify listeners that recording and transcription have stopped for this session.
+		t.emitState(session.ID, EventRecordingStopped, "Recording stopped")
+		close(session.Done)
 	}()
 
-	jobs := make(chan Job, 4)
+	jobQueue := make(chan Job, DefaultJobBufferSize)
 
 	var workers sync.WaitGroup
 	workers.Add(1)
 	go func() {
 		defer workers.Done()
-		ts.runWorker(sess.ID, jobs)
+		for job := range jobQueue {
+			t.process(session.ID, job)
+		}
 	}()
 	defer func() {
-		close(jobs)
+		close(jobQueue)
 		workers.Wait()
 	}()
 
@@ -71,11 +69,13 @@ func (ts *TranscribeService) runSession(
 	for {
 		select {
 		case frame, ok := <-frames:
-			if !ok {
-				ts.enqueueChunks(context.Background(), jobs, audioChunker.Flush(), &chunkID)
+			if !ok { // If the channel is close, flush the remaining chunks
+				t.enqueueJob(context.Background(), jobQueue, audioChunker.Flush(), &chunkID)
 				return
 			}
-			ts.enqueueChunks(ctx, jobs, audioChunker.AddFrame(frame), &chunkID)
+
+			// Add the frame to the chunker and enqueue any new chunks
+			t.enqueueJob(ctx, jobQueue, audioChunker.AddFrame(frame), &chunkID)
 
 		case err, ok := <-recorderErrs:
 			if !ok {
@@ -83,29 +83,33 @@ func (ts *TranscribeService) runSession(
 				continue
 			}
 			if ok && err != nil {
-				ts.emitError(sess.ID, err)
+				t.emitError(session.ID, err)
 				return
 			}
 
 		case <-ctx.Done():
-			ts.enqueueChunks(context.Background(), jobs, audioChunker.Flush(), &chunkID)
+			t.enqueueJob(context.Background(), jobQueue, audioChunker.Flush(), &chunkID)
 			return
 		}
 	}
 }
 
-func (ts *TranscribeService) enqueueChunks(
+func (t *TranscribeService) enqueueJob(
 	ctx context.Context,
-	jobs chan<- Job,
+	queue chan<- Job,
 	chunks []chunker.AudioChunk,
-	chunkID *int64,
+	chunkID *int64, // use pointer to persist increment across repeated calls
 ) {
 	for _, chunk := range chunks {
 		*chunkID = *chunkID + 1
-		job := Job{ID: *chunkID, Chunk: chunk}
+		job := Job{
+			ID:    *chunkID,
+			Chunk: chunk,
+		}
+
 		if chunk.Final {
 			select {
-			case jobs <- job:
+			case queue <- job:
 			case <-ctx.Done():
 				return
 			}
@@ -113,7 +117,7 @@ func (ts *TranscribeService) enqueueChunks(
 		}
 
 		select {
-		case jobs <- job:
+		case queue <- job:
 		default:
 		}
 	}

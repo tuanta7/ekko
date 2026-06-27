@@ -2,25 +2,24 @@ package services
 
 import (
 	"github.com/tuanta7/ekko/services/adapter/whisper"
+	"github.com/tuanta7/ekko/services/chunker"
 )
 
-func (ts *TranscribeService) runWorker(
-	sessionID string,
-	jobs <-chan Job,
-) {
-	for job := range jobs {
-		ts.process(sessionID, job)
-	}
+type Job struct {
+	ID    int64
+	Chunk chunker.AudioChunk
 }
 
-func (ts *TranscribeService) process(sessionID string, job Job) {
-	ts.emitState(sessionID, "transcribing", "")
+// process transcribes one queued audio chunk and emits its transcript and session state events.
+func (t *TranscribeService) process(sessionID string, job Job) {
+	// Notify listeners that transcription is in progress for this session.
+	t.emitState(sessionID, EventTranscribing, "")
 
-	segments, err := ts.scriber.Transcribe(job.Chunk.Samples, whisper.TranscribeOptions{
+	segments, err := t.scriber.Transcribe(job.Chunk.Samples, whisper.TranscribeOptions{
 		TokenTimestamps: job.Chunk.Final,
 	})
 	if err != nil {
-		ts.emitError(sessionID, err)
+		t.emitError(sessionID, err)
 		return
 	}
 
@@ -29,8 +28,7 @@ func (ts *TranscribeService) process(sessionID string, job Job) {
 		return
 	}
 
-	// New transcript to be displayed
-	ts.emitTranscript(TranscriptEvent{
+	t.emitTranscript(TranscriptEvent{
 		SessionID: sessionID,
 		ChunkID:   job.ID,
 		Text:      text,
@@ -38,7 +36,9 @@ func (ts *TranscribeService) process(sessionID string, job Job) {
 		StartMs:   job.Chunk.Start.Milliseconds(),
 		EndMs:     job.Chunk.End.Milliseconds(),
 	})
+
 	if job.Chunk.Final {
-		ts.emitState(sessionID, "recording", "")
+		// Notify listeners that the session has returned to recording after the final chunk.
+		t.emitState(sessionID, EventRecording, "")
 	}
 }

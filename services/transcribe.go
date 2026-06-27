@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/tuanta7/ekko/services/adapter/ffmpeg"
 	"github.com/tuanta7/ekko/services/adapter/whisper"
@@ -27,21 +28,52 @@ var (
 	_ application.ServiceShutdown = (*TranscribeService)(nil)
 )
 
-func (ts *TranscribeService) context() context.Context {
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
+func (t *TranscribeService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
-	if ts.ctx != nil {
-		return ts.ctx
-	}
-	return context.Background()
+	t.app = application.Get()
+	t.ctx = ctx
+	t.recorder = ffmpeg.NewRecorder()
+	t.sessions = make(map[string]*TranscribeSession)
+	return nil
 }
 
-func (ts *TranscribeService) ensureScriber() error {
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
+func (t *TranscribeService) ServiceShutdown() error {
+	t.mu.Lock()
+	sessions := make([]*TranscribeSession, 0, len(t.sessions))
+	for _, sess := range t.sessions {
+		sessions = append(sessions, sess)
+	}
+	t.mu.Unlock()
 
-	if ts.scriber != nil {
+	for _, session := range sessions {
+		session.Shutdown()
+	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.scriber != nil {
+		err := t.scriber.Close()
+		t.scriber = nil
+		return err
+	}
+	return nil
+}
+
+func (t *TranscribeService) ListSources() ([]string, error) {
+	ctx, cancel := context.WithTimeout(t.ctx, 3*time.Second)
+	defer cancel()
+
+	return t.recorder.ListSources(ctx)
+}
+
+// initScriber initializes the Whisper scriber lazily.
+func (t *TranscribeService) initScriber() error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if t.scriber != nil {
 		return nil
 	}
 
@@ -50,50 +82,14 @@ func (ts *TranscribeService) ensureScriber() error {
 		return err
 	}
 
-	ts.scriber = scriber
+	t.scriber = scriber
 	return nil
 }
 
-func (ts *TranscribeService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
-
-	ts.app = application.Get()
-	ts.ctx = ctx
-	ts.recorder = ffmpeg.NewRecorder()
-	ts.sessions = make(map[string]*TranscribeSession)
-
-	return nil
-}
-
-func (ts *TranscribeService) ServiceShutdown() error {
-	ts.mu.Lock()
-	sessions := make([]*TranscribeSession, 0, len(ts.sessions))
-	for _, sess := range ts.sessions {
-		sessions = append(sessions, sess)
-	}
-	ts.mu.Unlock()
-
-	for _, sess := range sessions {
-		sess.Shutdown()
-	}
-
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
-	if ts.scriber != nil {
-		err := ts.scriber.Close()
-		ts.scriber = nil
-		return err
-	}
-	return nil
-}
-
-func (ts *TranscribeService) Start(options StartOptions) (string, error) {
-	ts.ensureRecorder()
-
-	source := strings.TrimSpace(options.Source)
+func (t *TranscribeService) Start(source string) (string, error) {
+	source = strings.TrimSpace(source)
 	if source == "" {
-		sources, err := ts.ListSources()
+		sources, err := t.ListSources()
 		if err != nil {
 			return "", err
 		}
@@ -103,45 +99,45 @@ func (ts *TranscribeService) Start(options StartOptions) (string, error) {
 		source = sources[0]
 	}
 
-	ts.mu.Lock()
-	if len(ts.sessions) > 0 {
-		ts.mu.Unlock()
+	t.mu.Lock()
+	if len(t.sessions) > 0 {
+		t.mu.Unlock()
 		return "", errors.New("a transcription session is already running")
 	}
-	ts.mu.Unlock()
+	t.mu.Unlock()
 
-	if err := ts.ensureScriber(); err != nil {
+	if err := t.initScriber(); err != nil {
 		return "", err
 	}
 
-	ctx, cancel := context.WithCancel(ts.context())
-	frames, recorderErrs, err := ts.recorder.Stream(ctx, source)
+	ctx, cancel := context.WithCancel(t.ctx)
+	frames, recorderErrs, err := t.recorder.Stream(ctx, source)
 	if err != nil {
 		cancel()
 		return "", err
 	}
 
-	s := NewSession(cancel)
-	id := s.ID
+	session := NewSession(cancel)
 
-	ts.mu.Lock()
-	ts.sessions[id] = s
-	ts.mu.Unlock()
+	t.mu.Lock()
+	t.sessions[session.ID] = session
+	t.mu.Unlock()
 
-	ts.emitState(id, "recording", "Recording started")
-	go ts.runSession(ctx, s, frames, recorderErrs)
+	// Notify listeners that audio recording has started for this session.
+	t.emitState(session.ID, EventRecording, "Recording started")
+	go t.runSession(ctx, session, frames, recorderErrs)
 
-	return id, nil
+	return session.ID, nil
 }
 
-func (ts *TranscribeService) Stop(sessionID string) error {
-	ts.mu.Lock()
-	s, ok := ts.sessions[sessionID]
-	ts.mu.Unlock()
+func (t *TranscribeService) Stop(sessionID string) error {
+	t.mu.Lock()
+	session, ok := t.sessions[sessionID]
+	t.mu.Unlock()
 	if !ok {
 		return errors.New("transcription session not found")
 	}
 
-	s.Cancel()
+	session.Cancel()
 	return nil
 }
