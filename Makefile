@@ -1,26 +1,30 @@
-.PHONY: install build dev dev-web start
+.PHONY: setup-wails-v3 setup-audio setup-whisper download-model setup dev build
 SHELL := /bin/bash
 .ONESHELL:
 
-MODEL ?= ggml-base
+setup: setup-wails3 setup-audio setup-whisper
 
-install:
-	./scripts/install.sh
+setup-wails3:
+	sudo apt update
+	sudo apt install pkg-config gcc libgtk-4-dev libwebkitgtk-6.0-dev
+	go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
+	wails3 doctor # Expected: Your system is ready for Wails development!
+
+setup-audio:
+	sudo apt update
+	sudo apt install pulseaudio-utils ffmpeg cmake
+	sudo apt-get install libsdl2-dev
+
+setup-whisper:
+	./scripts/setup-whisper.sh
+
+download-model:
+	./scripts/download-model.sh
+
+dev:
+	source ./scripts/setup-env.sh
+	wails3 dev
 
 build:
-	./scripts/build-whisper.sh
-
-dev: install build
-	source ./scripts/setup-whisper.sh
-	go build -o ekko ./cmd/ekko
-	./ekko run --model $(MODEL)
-
-dev-web: install build
-	source ./scripts/setup-whisper.sh
-	go build -o ekko ./cmd/ekko
-	./ekko run --web --addr :8080 --model $(MODEL)
-
-start:
-	source ./scripts/setup-whisper.sh
-	go build -o ekko ./cmd/ekko
-	./ekko run
+	source ./scripts/setup-env.sh
+	wails3 build

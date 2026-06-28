@@ -27,7 +27,7 @@ jobs:
         run: go mod download
 
       - name: Vet pure-Go packages
-        run: go vet ./pkg/...
+        run: go vet ./services/adapter/ffmpeg ./services/chunker
 
       - name: Run tests (pure-Go packages)
-        run: go test -race ./pkg/...
+        run: go test -race ./services/adapter/ffmpeg ./services/chunker
