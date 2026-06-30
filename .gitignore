@@ -9,6 +9,7 @@ build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
 .env
 .idea/
 .vscode/
+.vite/
 node_modules/
 dist/
 *.wav
