@@ -116,7 +116,7 @@ function App() {
   const liveText = recorder.error || partial?.text || (isActive ? "Listening for speech…" : "No live segment yet.");
 
   return (
-    <main className="h-full w-full bg-transparent font-sans text-zinc-900 antialiased selection:bg-zinc-300">
+    <main className="h-full w-full bg-transparent font-sans text-gray-900 antialiased selection:bg-orange-200">
       <section
         className="mono-shell relative flex h-full w-full min-w-0 flex-col overflow-hidden"
         aria-label="Transcription controls"

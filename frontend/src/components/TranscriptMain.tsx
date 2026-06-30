@@ -15,19 +15,34 @@ function TranscriptMain({ finalLines, liveLine, displayText, error, scrollContai
   return (
     <div
       ref={scrollContainerRef}
-      className="transcript-scroll relative z-10 mx-2 mb-2 min-h-0 flex-1 overflow-y-auto rounded-2xl bg-zinc-200/60 px-2 py-2"
+      className="transcript-scroll relative z-10 min-h-0 flex-1 overflow-y-auto bg-white"
     >
-      <div className="mx-auto grid gap-2">
+      <div className="grid gap-2 p-3">
         {finalLines.map((line) => (
           <TranscriptSegment key={line.id} line={line} />
         ))}
-        <article className="grid gap-0.5 rounded-xl bg-zinc-100/80 px-2.5 py-1.5" aria-live="polite">
+        <article
+          className={`grid gap-0.5 rounded px-3 py-2 ${
+            error
+              ? "bg-red-50"
+              : liveLine
+                ? "bg-orange-50 animate-pulse"
+                : "bg-gray-50"
+          }`}
+          aria-live="polite"
+        >
           {liveLine && (
-            <time className="text-[10px] font-semibold tabular-nums tracking-wide text-zinc-600">
+            <time className="text-[9px] font-bold tabular-nums tracking-wide text-orange-700 uppercase">
               {formatTime(liveLine.startMs)} – {formatTime(liveLine.endMs)}
             </time>
           )}
-          <p className={`text-sm leading-5 ${error ? "text-zinc-950" : liveLine ? "text-zinc-900" : "text-zinc-500"}`}>
+          <p className={`text-sm leading-6 font-medium ${
+            error
+              ? "text-red-900"
+              : liveLine
+                ? "text-gray-900"
+                : "text-gray-600"
+          }`}>
             {displayText}
           </p>
         </article>
@@ -38,11 +53,11 @@ function TranscriptMain({ finalLines, liveLine, displayText, error, scrollContai
 
 function TranscriptSegment({ line }: { line: TranscriptLine }) {
   return (
-    <article className="grid gap-0.5 rounded-xl bg-zinc-100/80 px-2.5 py-1.5">
-      <time className="text-[10px] font-semibold tabular-nums tracking-wide text-zinc-600">
+    <article className="grid gap-0.5 rounded bg-gray-50 px-3 py-2">
+      <time className="text-[9px] font-bold tabular-nums tracking-wide text-orange-600 uppercase">
         {formatTime(line.startMs)} – {formatTime(line.endMs)}
       </time>
-      <p className="text-sm leading-5 text-zinc-800">{line.text}</p>
+      <p className="text-sm leading-6 text-gray-900">{line.text}</p>
     </article>
   );
 }

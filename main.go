@@ -67,7 +67,7 @@ func main() {
 		Width:            540,
 		Height:           240,
 		BackgroundType:   application.BackgroundTypeTransparent,
-		BackgroundColour: application.NewRGBA(0, 0, 0, 0),
+		BackgroundColour: application.NewRGBA(245, 245, 245, 220),
 		Linux: application.LinuxWindow{
 			WindowIsTranslucent: true,
 		},

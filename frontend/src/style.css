@@ -14,10 +14,22 @@ body,
   box-sizing: border-box;
 }
 
+/* Color system */
+:root {
+  --color-primary: #FF8C42;
+  --color-primary-dark: #E67E3C;
+  --color-secondary: #F5F5F5;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-bg-light: #FAFAFA;
+  --color-text-dark: #1A1A1A;
+  --color-text-muted: #666666;
+}
+
 .mono-shell {
-  background: rgba(244, 244, 245, 0.85);
-  border-radius: 20px;
-  box-shadow: 0 12px 36px rgb(24 24 27 / 14%);
+  background: #FAFAFA;
+  border-radius: 16px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -26,40 +38,50 @@ body,
 .mono-button-primary,
 .mono-select {
   transition:
-    background 160ms ease,
-    color 160ms ease,
-    transform 160ms ease;
+    background 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+  font-weight: 500;
+  border: none;
 }
 
 .mono-button,
 .mono-select {
-  color: rgb(63 63 70);
-  background: rgb(228 228 231);
+  color: var(--color-text-dark);
+  background: #F0F0F0;
 }
 
 .mono-button:hover:not(:disabled),
 .mono-select:hover:not(:disabled),
 .mono-select:focus {
-  color: rgb(24 24 27);
-  background: rgb(212 212 216);
+  color: var(--color-text-dark);
+  background: #E0E0E0;
 }
 
 .mono-button-primary {
-  color: rgb(250 250 250);
-  background: rgb(39 39 42);
+  color: #FFFFFF;
+  background: var(--color-primary);
 }
 
 .mono-button-primary:hover:not(:disabled) {
-  background: rgb(63 63 70);
+  background: var(--color-primary-dark);
+}
+
+.mono-button:disabled,
+.mono-button-primary:disabled,
+.mono-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 button,
 select {
   font: inherit;
+  cursor: pointer;
 }
 
 .transcript-scroll {
-  scrollbar-color: rgb(113 113 122 / 45%) transparent;
+  scrollbar-color: #CCC transparent;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
@@ -69,11 +91,21 @@ select {
 }
 
 .transcript-scroll::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgb(113 113 122 / 40%);
+  border-radius: 3px;
+  background: #CCC;
+}
+
+.transcript-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 #audio-source {
-  color: rgb(63 63 70);
-  font-size: 10px;
+  color: var(--color-text-dark);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+#audio-source option {
+  background: var(--color-bg-light);
+  color: var(--color-text-dark);
 }
