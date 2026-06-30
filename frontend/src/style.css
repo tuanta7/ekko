@@ -15,9 +15,11 @@ body,
 }
 
 .mono-shell {
-  background: rgb(244 244 245);
+  background: rgba(244, 244, 245, 0.85);
   border-radius: 20px;
   box-shadow: 0 12px 36px rgb(24 24 27 / 14%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .mono-button,
