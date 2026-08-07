@@ -9,10 +9,17 @@
 
 ## Setup
 
-Download the fixed Whisper model before starting transcription. Ekko loads
-`ggml/ggml-tiny.en-q5_1.bin` and transcribes in English.
+Clone this repository with whisper-cpp submodule
 
 ```sh
+git clone https://github.com/tuanta7/ekko.git
+git submodule update --init --recursive
+```
+
+Download Whisper model before starting transcription.
+
+```sh
+# tiny.en-q5_1.bin
 make download-model
 ```
 
