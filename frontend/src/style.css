@@ -16,22 +16,106 @@ body,
 
 /* Color system */
 :root {
-  --color-primary: #FF8C42;
-  --color-primary-dark: #E67E3C;
-  --color-secondary: #F5F5F5;
+  --color-primary: #0866FF;
+  --color-primary-dark: #1877F2;
   --color-success: #10B981;
   --color-warning: #F59E0B;
   --color-danger: #EF4444;
-  --color-bg-light: #FAFAFA;
-  --color-text-dark: #1A1A1A;
-  --color-text-muted: #666666;
+  --color-surface: rgba(36, 37, 38, 0.72);
+  --color-surface-raised: rgba(255, 255, 255, 0.08);
+  --color-text: #E4E6EB;
+  --color-text-muted: #B0B3B8;
 }
 
 .mono-shell {
-  background: #FAFAFA;
-  border-radius: 16px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* Recording indicator: four bars bouncing out of phase */
+.wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 10px;
+}
+
+.wave i {
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: currentColor;
+  animation: wave 900ms ease-in-out infinite;
+}
+
+.wave i:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.wave i:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+.wave i:nth-child(4) {
+  animation-delay: 450ms;
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Placeholder for a chunk with no text yet: three dots jumping in sequence */
+.dots {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+  padding-bottom: 5px;
+}
+
+.dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
+  animation: jump 1000ms ease-in-out infinite;
+}
+
+.dots i:nth-child(2) {
+  animation-delay: 160ms;
+}
+
+.dots i:nth-child(3) {
+  animation-delay: 320ms;
+}
+
+@keyframes jump {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave i,
+  .dots i,
+  .animate-spin {
+    animation: none;
+  }
 }
 
 .mono-button,
@@ -47,15 +131,15 @@ body,
 
 .mono-button,
 .mono-select {
-  color: var(--color-text-dark);
-  background: #F0F0F0;
+  color: var(--color-text);
+  background: var(--color-surface-raised);
 }
 
 .mono-button:hover:not(:disabled),
 .mono-select:hover:not(:disabled),
 .mono-select:focus {
-  color: var(--color-text-dark);
-  background: #E0E0E0;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .mono-button-primary {
@@ -81,7 +165,7 @@ select {
 }
 
 .transcript-scroll {
-  scrollbar-color: #CCC transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
@@ -92,7 +176,7 @@ select {
 
 .transcript-scroll::-webkit-scrollbar-thumb {
   border-radius: 3px;
-  background: #CCC;
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .transcript-scroll::-webkit-scrollbar-track {
@@ -100,12 +184,12 @@ select {
 }
 
 #audio-source {
-  color: var(--color-text-dark);
+  color: var(--color-text);
   font-size: 11px;
   font-weight: 500;
 }
 
 #audio-source option {
-  background: var(--color-bg-light);
-  color: var(--color-text-dark);
+  background: #242526;
+  color: var(--color-text);
 }

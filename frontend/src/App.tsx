@@ -113,10 +113,10 @@ function App() {
     setPartial(null);
   };
 
-  const liveText = recorder.error || partial?.text || (isActive ? "Listening for speech…" : "No live segment yet.");
+  const liveText = recorder.error || partial?.text || "";
 
   return (
-    <main className="h-full w-full bg-transparent font-sans text-gray-900 antialiased selection:bg-orange-200">
+    <main className="h-full w-full bg-transparent font-sans text-gray-100 antialiased selection:bg-blue-400/40">
       <section
         className="mono-shell relative flex h-full w-full min-w-0 flex-col overflow-hidden"
         aria-label="Transcription controls"
@@ -136,6 +136,7 @@ function App() {
           finalLines={finalLines}
           liveLine={partial}
           displayText={liveText}
+          active={isActive}
           error={recorder.error}
           scrollContainerRef={transcriptRef}
         />

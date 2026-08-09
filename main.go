@@ -8,6 +8,7 @@ import (
 
 	"github.com/tuanta7/ekko/services"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 // Wails uses Go's `embed` package to embed the frontend files into the binary.
@@ -55,6 +56,12 @@ func main() {
 		},
 	})
 
+	// GTK4 windows are painted opaque by the theme, so drop that background once
+	// GTK is up (on the main thread) or the transparent webview shows grey.
+	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+		application.InvokeSync(transparentWindows)
+	})
+
 	// Create a new window with the necessary options.
 	// 'Title' is the title of the window.
 	// 'Mac' options tailor the window when running on macOS.
@@ -64,13 +71,11 @@ func main() {
 		Title:            "Ekko",
 		Frameless:        true,
 		AlwaysOnTop:      true,
-		Width:            540,
-		Height:           240,
+		Width:            460,
+		Height:           190,
 		BackgroundType:   application.BackgroundTypeTransparent,
-		BackgroundColour: application.NewRGBA(245, 245, 245, 220),
-		Linux: application.LinuxWindow{
-			WindowIsTranslucent: true,
-		},
+		BackgroundColour: application.NewRGBA(0, 0, 0, 0), // fully transparent webview; the page's CSS paints the window
+
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
