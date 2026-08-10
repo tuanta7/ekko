@@ -45,4 +45,4 @@ For a production build:
 make build
 ```
 
-![Ekko](demo.png)
+![Ekko](./demo.png)
