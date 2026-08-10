@@ -18,13 +18,20 @@ setup-audio:
 setup-whisper:
 	./scripts/setup-whisper.sh
 
+# make download-model MODEL=base.en-q5_1
+MODEL ?= tiny.en-q5_1
+
 download-model:
-	./scripts/download-model.sh
+	./scripts/download-model.sh $(MODEL)
 
 dev:
 	source ./scripts/setup-env.sh
-	wails3 dev
+	EKKO_MODEL=$(MODEL) wails3 dev
 
 build:
 	source ./scripts/setup-env.sh
 	wails3 build
+
+run:
+	source ./scripts/setup-env.sh
+	EKKO_MODEL=$(MODEL) ./bin/ekko

@@ -2,6 +2,7 @@ package whisper
 
 import (
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -9,7 +10,15 @@ import (
 	"github.com/ggerganov/whisper.cpp/bindings/go/pkg/whisper"
 )
 
-const modelPath = "ggml/ggml-tiny.en-q5_1.bin"
+const defaultModel = "tiny.en-q5_1"
+
+func modelPath() string {
+	name := os.Getenv("EKKO_MODEL")
+	if name == "" {
+		name = defaultModel
+	}
+	return "ggml/ggml-" + name + ".bin"
+}
 
 type Scriber struct {
 	mu    sync.Mutex
@@ -17,7 +26,7 @@ type Scriber struct {
 }
 
 func NewScriber() (*Scriber, error) {
-	model, err := whisper.New(modelPath)
+	model, err := whisper.New(modelPath())
 	if err != nil {
 		return nil, err
 	}
