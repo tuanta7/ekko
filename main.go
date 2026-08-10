@@ -19,6 +19,9 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/appicon.png
+var trayIcon []byte
+
 func init() {
 	// Register a custom event whose associated data type is string.
 	// This is not required, but the binding generator will pick up registered events
@@ -67,7 +70,7 @@ func main() {
 	// 'Mac' options tailor the window when running on macOS.
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Ekko",
 		Frameless:        true,
 		AlwaysOnTop:      true,
@@ -83,6 +86,18 @@ func main() {
 		},
 		URL: "/",
 	})
+
+	// System tray: left click toggles the window, right click opens the menu.
+	menu := application.NewMenu()
+	menu.Add("Hide").OnClick(func(*application.Context) { window.Hide() })
+	menu.Add("Show").OnClick(func(*application.Context) { window.Show() })
+	menu.AddSeparator()
+	menu.Add("Quit").OnClick(func(*application.Context) { app.Quit() })
+
+	app.SystemTray.New().
+		SetIcon(trayIcon).
+		SetMenu(menu).
+		AttachWindow(window)
 
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.
