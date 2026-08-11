@@ -17,7 +17,7 @@ func modelPath() string {
 	if name == "" {
 		name = defaultModel
 	}
-	return "ggml/ggml-" + name + ".bin"
+	return "assets/ggml/ggml-" + name + ".bin"
 }
 
 type Scriber struct {
