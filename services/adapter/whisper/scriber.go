@@ -3,6 +3,7 @@ package whisper
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +18,18 @@ func modelPath() string {
 	if name == "" {
 		name = defaultModel
 	}
-	return "assets/ggml/ggml-" + name + ".bin"
+
+	file := "ggml-" + name + ".bin"
+	// Dev runs from the repo root; 
+	// Installed packages ship models under /usr/share.
+	for _, dir := range []string{"assets/ggml", "/usr/share/ekko/ggml"} {
+		p := filepath.Join(dir, file)
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+
+	return filepath.Join("assets/ggml", file)
 }
 
 type Scriber struct {

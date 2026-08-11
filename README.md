@@ -1,6 +1,6 @@
 # Ekko
 
-<img align="right" src="build/appicon.png" alt="Ekko Mascot" width="150"/>
+<img align="right" src="build/appicon.png" alt="Ekko Mascot" width="200"/>
 
 ![Status](https://img.shields.io/badge/status-development-orange)
 ![Language](https://img.shields.io/badge/lang-Go-blue)
@@ -39,10 +39,24 @@ Run the app in development mode:
 make dev
 ```
 
-For a production build:
+## Packaging (Linux)
+
+Build the binary first, then create a `.deb` in `bin/`:
 
 ```sh
 make build
+wails3 tool package -name ekko -format deb -config ./build/linux/nfpm/nfpm.yaml -out ./bin
+```
+
+Swap `-format deb` for `rpm` or `archlinux` for the other distros.
+
+The package ships the binary, the `tiny.en-q5_1` model (to `/usr/share/ekko/ggml/`), the icon and the `.desktop` entry; GTK, WebKit, `ffmpeg` and `pulseaudio-utils` are pulled in as dependencies.
+
+Install and remove:
+
+```sh
+sudo apt install ./bin/ekko.deb
+sudo apt remove ekko
 ```
 
 ![Ekko](./demo.png)
