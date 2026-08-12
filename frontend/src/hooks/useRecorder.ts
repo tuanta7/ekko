@@ -62,7 +62,12 @@ function recorderReducer(state: RecorderState, action: RecorderAction): Recorder
       return { sessionID: "", phase: "idle", status: "Unable to stop", error: action.message };
     case "state-received": {
       const nextPhase = parsePhase(action.event.state);
-      if (state.sessionID && action.event.sessionID && state.sessionID !== action.event.sessionID && state.phase !== "starting") {
+      if (
+        state.sessionID &&
+        action.event.sessionID &&
+        state.sessionID !== action.event.sessionID &&
+        state.phase !== "starting"
+      ) {
         return state;
       }
       if (state.phase === "stopping" && nextPhase !== "stopped") {

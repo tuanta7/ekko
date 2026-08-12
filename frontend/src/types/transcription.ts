@@ -8,8 +8,8 @@ export type RecorderState = {
 };
 
 export type TranscriptLine = {
-    id: number;
-    text: string;
-    startMs: number;
-    endMs: number;
+  id: number;
+  text: string;
+  startMs: number;
+  endMs: number;
 };
