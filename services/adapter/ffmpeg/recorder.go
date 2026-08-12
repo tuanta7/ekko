@@ -22,30 +22,8 @@ func NewRecorder() *Recorder {
 	return &Recorder{}
 }
 
-func (r *Recorder) ListSources(ctx context.Context) ([]string, error) {
-	listCmd := exec.CommandContext(ctx, "pactl", "list", "sources", "short")
-
-	var buf bytes.Buffer
-	listCmd.Stdout = &buf
-
-	if err := listCmd.Run(); err != nil {
-		return nil, err
-	}
-
-	output := strings.TrimSpace(buf.String())
-	if output == "" {
-		return nil, errors.New("no monitor sink found")
-	}
-
-	rows := strings.Split(output, "\n")
-	sources := make([]string, len(rows))
-	for i, row := range rows {
-		parts := strings.Fields(row)
-		sources[i] = strings.TrimSpace(parts[1])
-	}
-
-	return sources, nil
-}
+// ListSources and inputArgs are per-OS: PulseAudio on Linux, AVFoundation on
+// macOS. See recorder_linux.go / recorder_darwin.go.
 
 type RecordOptions struct {
 	Source        string
@@ -76,17 +54,15 @@ func (r *Recorder) Stream(ctx context.Context, source string) (<-chan Frame, <-c
 
 	// FFmpeg emits a continuous PCM stream; readFrames applies the frame
 	// boundaries using frameSamples rather than relying on FFmpeg packets.
-	cmd := exec.CommandContext(ctx,
-		"ffmpeg",
-		"-hide_banner",
-		"-loglevel", "error",
-		"-f", "pulse",
-		"-i", source,
+	args := append([]string{"-hide_banner", "-loglevel", "error"}, inputArgs(source)...)
+	args = append(args,
 		"-ac", "1", // Downmix the input to mono.
 		"-ar", fmt.Sprintf("%d", DefaultSampleRate),
 		"-f", "f32le", // Emit headerless, little-endian float32 PCM.
 		"pipe:1", // Stream PCM through stdout.
 	)
+
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
