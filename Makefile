@@ -4,6 +4,20 @@ SHELL := /bin/bash
 
 setup: setup-wails3 setup-audio setup-whisper
 
+ifeq ($(shell uname -s),Darwin)
+
+setup-wails3:
+	xcode-select --install || true # WebKit comes from the system, no GTK needed
+	go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
+	wails3 doctor # Expected: Your system is ready for Wails development!
+
+# blackhole-2ch is the loopback device that stands in for Pulse's monitor sinks.
+setup-audio:
+	brew install ffmpeg cmake
+	brew install --cask blackhole-2ch
+
+else
+
 setup-wails3:
 	sudo apt update
 	sudo apt install pkg-config gcc libgtk-4-dev libwebkitgtk-6.0-dev
@@ -14,6 +28,8 @@ setup-audio:
 	sudo apt update
 	sudo apt install pulseaudio-utils ffmpeg cmake
 	sudo apt-get install libsdl2-dev
+
+endif
 
 setup-whisper:
 	./assets/scripts/setup-whisper.sh

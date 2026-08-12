@@ -20,6 +20,11 @@ echo "Project root: $PROJECT_DIR"
 export C_INCLUDE_PATH="$WHISPER_CPP_DIR/include:$WHISPER_CPP_DIR/ggml/include"
 export LIBRARY_PATH="$WHISPER_BUILD_DIR/src:$WHISPER_BUILD_DIR/ggml/src"
 
+# The macOS build splits the Metal and BLAS backends into their own libs.
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  export LIBRARY_PATH="$LIBRARY_PATH:$WHISPER_BUILD_DIR/ggml/src/ggml-metal:$WHISPER_BUILD_DIR/ggml/src/ggml-blas"
+fi
+
 echo -e "${YELLOW}"[INFO]"${NC}" Environment variables set:
 echo "C_INCLUDE_PATH: $C_INCLUDE_PATH"
 echo "LIBRARY_PATH: $LIBRARY_PATH"

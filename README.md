@@ -8,13 +8,19 @@ A floating, always-on-top overlay that transcribes what your machine hears local
 
 ## Requirements
 
-- Linux with PulseAudio/PipeWire (`pactl`) and `ffmpeg`
-- GTK4 + WebKitGTK 6.0, Go, Node, and [Wails v3](https://v3.wails.io)
+- Go, Node, and [Wails v3](https://v3.wails.io)
 - A C/C++ compiler and `cmake` for whisper.cpp
+- `ffmpeg`, plus an audio backend:
+  - **Linux**: PulseAudio/PipeWire (`pactl`), GTK4 and WebKitGTK 6.0
+  - **macOS**: AVFoundation and Xcode command line tools (WebKit ships with the OS)
 
 ```txt
-pactl (pick source) → ffmpeg (16 kHz mono f32 PCM) → chunker (energy VAD) → whisper.cpp → UI
+pick source → ffmpeg (16 kHz mono f32 PCM) → chunker (energy VAD) → whisper.cpp → UI
 ```
+
+The source list comes from `pactl` on Linux and `ffmpeg -f avfoundation
+-list_devices` on macOS. whisper.cpp runs on CUDA where available, and on Metal
+on Apple silicon.
 
 ## Quick start
 
@@ -43,6 +49,18 @@ make dev MODEL=base.en-q5_1
 
 See `whisper/models/README.md` for the full list. Downloaded `.bin` files are
 ignored by Git.
+
+## Capturing system audio on macOS
+
+Linux gets the machine's output for free through Pulse's `.monitor` sources.
+macOS has no such thing, so `make setup` installs [BlackHole](https://existential.audio/blackhole/)
+(`brew install --cask blackhole-2ch`). After it installs, open **Audio MIDI
+Setup**, create a *Multi-Output Device* combining your speakers and *BlackHole
+2ch*, and select it as the system output, then pick `BlackHole 2ch` in Ekko.
+Without that, only the microphone devices are usable.
+
+The first run prompts for microphone access; grant it to the terminal (`make
+dev`) or to Ekko.app (`make build`), otherwise ffmpeg records silence.
 
 ## Packaging (Linux)
 
