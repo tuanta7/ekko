@@ -32,7 +32,7 @@ make dev             # or: make build && make run
 
 | Variable     | Default        | Purpose                                                                                    |
 | ------------ | -------------- | ------------------------------------------------------------------------------------------ |
-| `EKKO_MODEL` | `tiny.en-q5_1` | Model to load, from `assets/ggml/ggml-<name>.bin`, falling back to `/usr/share/ekko/ggml/` |
+| `EKKO_MODEL` | `tiny.en-q5_1` | Model to load, from `/usr/share/ekko/ggml/ggml-<name>.bin`, falling back to `assets/ggml/` |
 
 Other models work the same way, download one, then run with it:
 

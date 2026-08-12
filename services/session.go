@@ -69,7 +69,8 @@ func (t *TranscribeService) runSession(
 	for {
 		select {
 		case frame, ok := <-frames:
-			if !ok { // If the channel is close, flush the remaining chunks
+			if !ok { 
+				// If the channel is close, flush the remaining chunks
 				t.enqueueJob(context.Background(), jobQueue, audioChunker.Flush(), &chunkID)
 				return
 			}

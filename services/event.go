@@ -7,7 +7,7 @@ const (
 
 	EventState   = "transcribe:state"
 	EventPartial = "transcribe:partial"
-	EventFinal   = "transcribe:final" // final chunk
+	EventFinal   = "transcribe:final" 
 	EventError   = "transcribe:error"
 )
 

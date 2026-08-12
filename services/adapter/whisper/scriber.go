@@ -20,15 +20,12 @@ func modelPath() string {
 	}
 
 	file := "ggml-" + name + ".bin"
-	// Dev runs from the repo root; 
-	// Installed packages ship models under /usr/share.
-	for _, dir := range []string{"assets/ggml", "/usr/share/ekko/ggml"} {
-		p := filepath.Join(dir, file)
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
+	p := filepath.Join("/usr/share/ekko/ggml", file)
+	if _, err := os.Stat(p); err == nil {
+		return p
 	}
 
+	// fallback to dev path, relative to the repo root
 	return filepath.Join("assets/ggml", file)
 }
 

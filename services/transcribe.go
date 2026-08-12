@@ -68,7 +68,6 @@ func (t *TranscribeService) ListSources() ([]string, error) {
 	return t.recorder.ListSources(ctx)
 }
 
-// initScriber initializes the Whisper scriber lazily.
 func (t *TranscribeService) initScriber() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
