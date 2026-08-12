@@ -62,4 +62,4 @@ sudo apt install ./bin/ekko.deb
 sudo apt remove ekko
 ```
 
-![Ekko](./demo.png)
+![Ekko](./assets/demo.png)
