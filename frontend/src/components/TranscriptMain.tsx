@@ -9,15 +9,12 @@ type TranscriptMainProps = {
   displayText: string;
   active: boolean;
   error: string;
-  scrollContainerRef: RefObject<HTMLDivElement>;
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
 };
 
 function TranscriptMain({ finalLines, liveLine, displayText, active, error, scrollContainerRef }: TranscriptMainProps) {
   return (
-    <div
-      ref={scrollContainerRef}
-      className="transcript-scroll relative z-10 min-h-0 flex-1 overflow-y-auto"
-    >
+    <div ref={scrollContainerRef} className="transcript-scroll relative z-10 min-h-0 flex-1 overflow-y-auto">
       <div className="grid gap-1.5 p-2">
         {finalLines.map((line) => (
           <TranscriptSegment key={line.id} line={line} />
