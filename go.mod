@@ -3,7 +3,7 @@ module github.com/tuanta7/ekko
 go 1.25.0
 
 require (
-	github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20260519065843-afa2ea544fb4
+	github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20260804135651-306c88f4d128
 	github.com/wailsapp/wails/v3 v3.0.0-beta.5
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
 )

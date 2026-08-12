@@ -4,8 +4,8 @@ github.com/coder/websocket v1.8.14 h1:9L0p0iKiNOibykf283eHkKUHHrpG7f65OE3BhhO7v9
 github.com/coder/websocket v1.8.14/go.mod h1:NX3SzP+inril6yawo5CQXx8+fk145lPDC6pumgx0mVg=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20260519065843-afa2ea544fb4 h1:jncNYIsvCvAq88h5Gqy23HPHzXuxTdudl0kBsxvS1iY=
-github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20260519065843-afa2ea544fb4/go.mod h1:qyHjS/50ORo01H0NsuEEGsQR9VCtOcEye0gUl2sx1s8=
+github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20260804135651-306c88f4d128 h1:PQ6Cp4RfFBvINrSfMb2gaQdLyZxs7+3279+YSLpqR+8=
+github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20260804135651-306c88f4d128/go.mod h1:qyHjS/50ORo01H0NsuEEGsQR9VCtOcEye0gUl2sx1s8=
 github.com/go-audio/audio v1.0.0 h1:zS9vebldgbQqktK4H0lUqWrG8P0NxCJVqcj7ZpNnwd4=
 github.com/go-audio/audio v1.0.0/go.mod h1:6uAu0+H2lHkwdGsAY+j2wHPNPpPoeg5AaEFh9FlA+Zs=
 github.com/go-audio/riff v1.0.0 h1:d8iCGbDvox9BfLagY94fBynxSPHO80LmZCaOsmKxokA=
