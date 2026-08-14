@@ -73,14 +73,16 @@ func main() {
 		Title:            "Ekko",
 		Frameless:        true,
 		AlwaysOnTop:      true,
-		Width:            460,
-		Height:           190,
+		Width:            480,
+		MinWidth:         400,
+		Height:           200,
+		MinHeight:        150,
 		BackgroundType:   application.BackgroundTypeTransparent,
 		BackgroundColour: application.NewRGBA(0, 0, 0, 0), // fully transparent webview; the page's CSS paints the window
-
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
-			Backdrop:                application.MacBackdropTranslucent,
+			DisableShadow:           true,
+			Backdrop:                application.MacBackdropTransparent,
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
 		URL: "/",
