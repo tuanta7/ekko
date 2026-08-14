@@ -18,8 +18,7 @@ A floating, always-on-top overlay that transcribes what your machine hears local
 pick source → ffmpeg (16 kHz mono f32 PCM) → chunker (energy VAD) → whisper.cpp → UI
 ```
 
-The source list comes from `pactl` on Linux and `ffmpeg -f avfoundation
--list_devices` on macOS. whisper.cpp runs on CUDA where available, and on Metal
+The source list comes from `pactl` on Linux and `ffmpeg -f avfoundation -list_devices` on macOS. whisper.cpp runs on CUDA where available, and on Metal
 on Apple silicon.
 
 ## Quick start
@@ -55,8 +54,8 @@ ignored by Git.
 Linux gets the machine's output for free through Pulse's `.monitor` sources.
 macOS has no such thing, so `make setup` installs [BlackHole](https://existential.audio/blackhole/)
 (`brew install --cask blackhole-2ch`). After it installs, open **Audio MIDI
-Setup**, create a *Multi-Output Device* combining your speakers and *BlackHole
-2ch*, and select it as the system output, then pick `BlackHole 2ch` in Ekko.
+Setup**, create a _Multi-Output Device_ combining your speakers and _BlackHole
+2ch_, and select it as the system output, then pick `BlackHole 2ch` in Ekko.
 Without that, only the microphone devices are usable.
 
 The first run prompts for microphone access; grant it to the terminal (`make

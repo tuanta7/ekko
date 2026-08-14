@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
-# Model to fetch, e.g. base.en-q5_1, small.en-q5_1, large-v3-turbo-q5_0.
-# See whisper/models/README.md for the full list.
+# See whisper/models/README.md for the full model list
+# Default to the lightest one: tiny.en-q5_1
 MODEL_NAME="${1:-${EKKO_MODEL:-tiny.en-q5_1}}"
 MODEL_DIR="$PROJECT_DIR/assets/ggml"
 DOWNLOADER="$PROJECT_DIR/whisper/models/download-ggml-model.sh"
