@@ -42,8 +42,8 @@ make dev             # or: make build && make run
 Other models work the same way, download one, then run with it:
 
 ```sh
-make download-model MODEL=base.en-q5_1
-make dev MODEL=base.en-q5_1
+make download-model MODEL=base
+make dev MODEL=base
 ```
 
 See `whisper/models/README.md` for the full list. Downloaded `.bin` files are
@@ -51,15 +51,19 @@ ignored by Git.
 
 ## Capturing system audio on macOS
 
-Linux gets the machine's output for free through Pulse's `.monitor` sources.
-macOS has no such thing, so `make setup` installs [BlackHole](https://existential.audio/blackhole/)
-(`brew install --cask blackhole-2ch`). After it installs, open **Audio MIDI
-Setup**, create a _Multi-Output Device_ combining your speakers and _BlackHole
-2ch_, and select it as the system output, then pick `BlackHole 2ch` in Ekko.
-Without that, only the microphone devices are usable.
+Linux gets the machine's output for free through Pulse's `.monitor` sources; macOS has no such thing, so `make setup` installs [BlackHole](https://existential.audio/blackhole/)
 
-The first run prompts for microphone access; grant it to the terminal (`make
-dev`) or to Ekko.app (`make build`), otherwise ffmpeg records silence.
+```sh
+brew install --cask blackhole-2ch
+
+# CoreAudio only picks the new driver up after a reboot or
+sudo killall coreaudiod
+```
+
+Then open **Audio MIDI Setup** app, create a _Multi-Output Device_ combining your speakers and _BlackHole 2ch_, and select it
+as the system output, then pick `BlackHole 2ch` in Ekko. Without that, only the microphone devices are usable.
+
+The first run prompts for microphone access; grant it to the terminal (`make dev`) or to Ekko.app (`make build`), otherwise ffmpeg records silence.
 
 ## Packaging (Linux)
 
