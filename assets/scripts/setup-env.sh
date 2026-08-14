@@ -25,12 +25,12 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   export LIBRARY_PATH="$LIBRARY_PATH:$WHISPER_BUILD_DIR/ggml/src/ggml-metal:$WHISPER_BUILD_DIR/ggml/src/ggml-blas"
 fi
 
-echo -e "${YELLOW}"[INFO]"${NC}" Environment variables set:
+echo -e "${YELLOW}[INFO]${NC} Environment variables set:"
 echo "C_INCLUDE_PATH: $C_INCLUDE_PATH"
 echo "LIBRARY_PATH: $LIBRARY_PATH"
 
 # If this script is being sourced, don't exit
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then    
   echo -e "${YELLOW}[WARN]${NC} This script should be sourced, not executed directly."    
-  echo "       Use: source ./setup-whisper.sh"
+  echo "       Use: source ./assets/scripts/setup-env.sh"
 fi
