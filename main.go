@@ -4,7 +4,6 @@ import (
 	"embed"
 	_ "embed"
 	"log"
-	"time"
 
 	"github.com/tuanta7/ekko/services"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -23,10 +22,6 @@ var assets embed.FS
 var trayIcon []byte
 
 func init() {
-	// Register a custom event whose associated data type is string.
-	// This is not required, but the binding generator will pick up registered events
-	// and provide a strongly typed JS/TS API for them.
-	application.RegisterEvent[string]("time")
 
 	// Transcribe events
 	application.RegisterEvent[services.StateEvent]("transcribe:state")
@@ -54,7 +49,7 @@ func main() {
 			Handler: application.AssetFileServerFS(assets),
 		},
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	})
 
@@ -88,27 +83,14 @@ func main() {
 		URL: "/",
 	})
 
-	// System tray: left click toggles the window, right click opens the menu.
 	menu := application.NewMenu()
 	menu.Add("Hide").OnClick(func(*application.Context) { window.Hide() })
 	menu.Add("Show").OnClick(func(*application.Context) { window.Show() })
 	menu.AddSeparator()
 	menu.Add("Quit").OnClick(func(*application.Context) { app.Quit() })
 
-	app.SystemTray.New().
-		SetIcon(trayIcon).
-		SetMenu(menu).
-		AttachWindow(window)
-
-	// Create a goroutine that emits an event containing the current time every second.
-	// The frontend can listen to this event and update the UI accordingly.
-	go func() {
-		for {
-			now := time.Now().Format(time.RFC1123)
-			app.Event.Emit("time", now)
-			time.Sleep(time.Second)
-		}
-	}()
+	tray := app.SystemTray.New().SetIcon(trayIcon).SetMenu(menu)
+	tray.OnClick(tray.ShowMenu)
 
 	err := app.Run()
 	if err != nil {
