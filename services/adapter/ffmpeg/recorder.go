@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	DefaultSampleRate    = 16000
+	DefaultSampleRate    = 16000 // Hz
 	DefaultFrameDuration = 100 * time.Millisecond
 	DefaultBufferSeconds = 30
 )

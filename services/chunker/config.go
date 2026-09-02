@@ -32,7 +32,7 @@ type Config struct {
 
 // DefaultConfig contains the standard chunking settings used by NewAudioChunker.
 var DefaultConfig = Config{
-	sampleRate:       ffmpeg.DefaultSampleRate, // samples per second
+	sampleRate:       ffmpeg.DefaultSampleRate,
 	frameDuration:    ffmpeg.DefaultFrameDuration,
 	minSpeech:        250 * time.Millisecond,
 	silenceToFinal:   700 * time.Millisecond,

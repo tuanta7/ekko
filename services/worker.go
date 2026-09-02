@@ -13,7 +13,7 @@ type Job struct {
 // process transcribes one queued audio chunk and emits its transcript and session state events.
 func (t *TranscribeService) process(sessionID string, job Job) {
 	// Notify listeners that transcription is in progress for this session.
-	t.emitState(sessionID, EventTranscribing, "")
+	t.emitState(sessionID, StateTranscribing, "")
 
 	segments, err := t.scriber.Transcribe(job.Chunk.Samples, whisper.TranscribeOptions{
 		TokenTimestamps: job.Chunk.Final,
@@ -39,6 +39,6 @@ func (t *TranscribeService) process(sessionID string, job Job) {
 
 	if job.Chunk.Final {
 		// Notify listeners that the session has returned to recording after the final chunk.
-		t.emitState(sessionID, EventRecording, "")
+		t.emitState(sessionID, StateRecording, "")
 	}
 }

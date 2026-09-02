@@ -8,10 +8,13 @@ import (
 type AudioChunk struct {
 	// Samples contain normalized PCM audio samples.
 	Samples []float32
+
 	// Start is the chunk's offset from the beginning of the audio stream.
 	Start time.Duration
+
 	// End is the chunk's end offset from the beginning of the audio stream.
 	End time.Duration
+
 	// Final reports whether the chunk completes an utterance.
 	Final bool
 }
@@ -23,18 +26,25 @@ type AudioChunker struct {
 
 	// sampleCursor is the total number of input samples processed so far.
 	sampleCursor int64
+
 	// inSpeech reports whether the chunker is currently collecting an utterance.
 	inSpeech bool
+
 	// speechStart is the absolute sample offset where the current buffer begins.
 	speechStart int64
+
 	// speechSamples contains the current utterance, including retained padding.
 	speechSamples []float32
+
 	// preRollSamples contains recent idle audio to prepend when speech begins.
 	preRollSamples []float32
+
 	// silenceSamples is the current run of non-speech samples in the utterance.
 	silenceSamples int
+
 	// activeSpeechSamples is the total number of samples classified as speech.
 	activeSpeechSamples int
+
 	// lastPartialAt is the buffer length when the previous partial chunk was emitted.
 	lastPartialAt int
 }

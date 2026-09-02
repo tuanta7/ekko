@@ -8,13 +8,13 @@ import (
 
 func TestStopCancelsWithoutWaitingForSessionDrain(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	session := &TranscribeSession{
+	session := &Session{
 		ID:     "session-1",
 		Cancel: cancel,
 		Done:   make(chan struct{}),
 	}
 	service := &TranscribeService{
-		sessions: map[string]*TranscribeSession{session.ID: session},
+		sessions: map[string]*Session{session.ID: session},
 	}
 
 	started := time.Now()

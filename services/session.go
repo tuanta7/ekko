@@ -14,28 +14,28 @@ const (
 	DefaultJobBufferSize = 4
 )
 
-type TranscribeSession struct {
+type Session struct {
 	ID     string
 	Cancel context.CancelFunc
 	Done   chan struct{}
 }
 
-func NewSession(cancel context.CancelFunc) *TranscribeSession {
-	return &TranscribeSession{
+func NewSession(cancel context.CancelFunc) *Session {
+	return &Session{
 		ID:     fmt.Sprintf("%d", time.Now().UnixNano()),
 		Cancel: cancel,
 		Done:   make(chan struct{}),
 	}
 }
 
-func (t *TranscribeSession) Shutdown() {
+func (t *Session) Shutdown() {
 	t.Cancel()
 	<-t.Done // Wait for the session to finish
 }
 
 func (t *TranscribeService) runSession(
 	ctx context.Context,
-	session *TranscribeSession,
+	session *Session,
 	frames <-chan ffmpeg.Frame,
 	recorderErrs <-chan error,
 ) {
@@ -43,8 +43,9 @@ func (t *TranscribeService) runSession(
 		t.mu.Lock()
 		delete(t.sessions, session.ID)
 		t.mu.Unlock()
+
 		// Notify listeners that recording and transcription have stopped for this session.
-		t.emitState(session.ID, EventRecordingStopped, "Recording stopped")
+		t.emitState(session.ID, StateStopped, "Recording stopped")
 		close(session.Done)
 	}()
 
@@ -69,7 +70,7 @@ func (t *TranscribeService) runSession(
 	for {
 		select {
 		case frame, ok := <-frames:
-			if !ok { 
+			if !ok {
 				// If the channel is close, flush the remaining chunks
 				t.enqueueJob(context.Background(), jobQueue, audioChunker.Flush(), &chunkID)
 				return

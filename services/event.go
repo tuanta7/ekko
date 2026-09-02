@@ -1,19 +1,23 @@
 package services
 
 const (
-	EventTranscribing     = "transcribing"
-	EventRecording        = "recording"
-	EventRecordingStopped = "stopped"
-
 	EventState   = "transcribe:state"
 	EventPartial = "transcribe:partial"
-	EventFinal   = "transcribe:final" 
+	EventFinal   = "transcribe:final"
 	EventError   = "transcribe:error"
+)
+
+type State string
+
+const (
+	StateTranscribing State = "transcribing" // whisper is reading a chunk
+	StateRecording    State = "recording"    // whisper is waiting for the next chunk
+	StateStopped      State = "stopped"      // user stopped recording or an error occurred
 )
 
 type StateEvent struct {
 	SessionID string `json:"sessionID"`
-	State     string `json:"state"`
+	State     State  `json:"state"`
 	Message   string `json:"message"`
 }
 
@@ -41,8 +45,7 @@ func (t *TranscribeService) emit(name string, data any) {
 	}
 }
 
-// emitState publishes the current transcription session state to application listeners.
-func (t *TranscribeService) emitState(sessionID string, state string, message string) {
+func (t *TranscribeService) emitState(sessionID string, state State, message string) {
 	t.emit(EventState, StateEvent{
 		SessionID: sessionID,
 		State:     state,

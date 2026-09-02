@@ -8,6 +8,7 @@ import (
 )
 
 // isSpeech reports whether a frame's RMS amplitude meets the speech threshold.
+// It returns true if the frame is classified as speech, false otherwise.
 func isSpeech(samples []float32, threshold float64) bool {
 	if len(samples) == 0 {
 		return false
@@ -23,6 +24,7 @@ func isSpeech(samples []float32, threshold float64) bool {
 }
 
 // samplesDuration converts a 64-bit sample count to a duration.
+// It takes the sampleRate as a parameter, which is the number of samples per second.
 func samplesDuration[T constraints.Integer](samples T, sampleRate int) time.Duration {
 	sampleCount := float64(samples) / float64(sampleRate)
 	return time.Duration(sampleCount * float64(time.Second))
