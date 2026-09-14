@@ -8,6 +8,7 @@ import (
 	"github.com/tuanta7/ekko/services"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
+	"github.com/wailsapp/wails/v3/pkg/services/dock"
 )
 
 // Wails uses Go's `embed` package to embed the frontend files into the binary.
@@ -53,10 +54,14 @@ func main() {
 		},
 	})
 
+	dockService := dock.NewWithOptions(dock.BadgeOptions{})
+
 	// GTK4 windows are painted opaque by the theme, so drop that background once
 	// GTK is up (on the main thread) or the transparent webview shows grey.
 	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
 		application.InvokeSync(transparentWindows)
+		// Wails' Dock service synchronously dispatches to Cocoa's main queue.
+		go dockService.HideAppIcon()
 	})
 
 	// Create a new window with the necessary options.
